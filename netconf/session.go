@@ -1,8 +1,5 @@
 package netconf
 
-// The Operations layer defines a set of base protocol operations
-// invoked as RPC methods with XML-encoded parameters.
-
 // Request represents the body of a Netconf RPC request.
 type Request string
 
