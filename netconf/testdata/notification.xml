@@ -1,0 +1,11 @@
+   <notification
+     xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">
+     <eventTime>2007-07-08T00:10:00Z</eventTime>
+     <event xmlns="http://example.com/event/1.0">
+         <eventClass>state</eventClass>
+         <reportingEntity>
+             <card>Ethernet0</card>
+         </reportingEntity>
+         <operState>enabled</operState>
+      </event>
+   </notification>
