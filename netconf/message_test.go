@@ -28,11 +28,11 @@ func TestNewSession(t *testing.T) {
 	assert.NotNil(t, ncs, "Session should be non-nil")
 
 	reply, err := ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
-	// ncs.Execute(Request(`<get-config><source><running/></source><filter type="subtree"><top xmlns="http://example.com/schema/1.2/config"><users/></top></filter></get-config>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 
 	reply, err = ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
+	assert.Zero(t, len(reply.Errors), "Not expecting server errors")
 }
