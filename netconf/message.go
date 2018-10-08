@@ -7,6 +7,7 @@ import (
 
 	"io"
 	"log"
+	"sync"
 
 	"github.com/damianoneill/net/netconf/rfc6242"
 )
@@ -16,10 +17,6 @@ import (
 
 // Request represents the body of a Netconf RPC request.
 type Request string
-
-// Response represents the response to a Netconf RPC request.
-type Response struct {
-}
 
 // HelloMessage defines the message sent/received during session negotiation.
 type HelloMessage struct {
@@ -53,14 +50,10 @@ type RPCError struct {
 	Info     string `xml:",innerxml"`
 }
 
-// ResponseHandler defines a callback function that will be invoked to handle a response to
-// an asynchronous request.
-type ResponseHandler func(res Response)
-
 // Session represents a Netconf Session
 type Session interface {
-	Execute(req Request) (*Response, error)
-	ExecuteAsync(req Request) (resp <-chan *Response, err error)
+	Execute(req Request) (*RPCReply, error)
+	ExecuteAsync(req Request, rchan chan *RPCReply) (err error)
 }
 
 type sesImpl struct {
@@ -70,10 +63,13 @@ type sesImpl struct {
 	nclog  *log.Logger
 	evtlog *log.Logger
 
-	pool []chan *Response
+	pool []chan *RPCReply
 
-	responseq []chan *Response
+	responseq []chan *RPCReply
 	hello     *HelloMessage
+	reqLock   sync.Mutex
+	pchLock   sync.Mutex
+	rchLock   sync.Mutex
 }
 
 type decoder struct {
@@ -134,21 +130,36 @@ func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, er
 	return sess, nil
 }
 
-func (si *sesImpl) Execute(req Request) (*Response, error) {
-	msg := &RPCMessage{MessageID: msgID(), Methods: []byte(string(req))}
-	err := si.enc.Encode(msg)
+func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
+
+	rchan := si.allocChan()
+	defer si.relChan(rchan)
+
+	err := si.ExecuteAsync(req, rchan)
 	if err != nil {
 		return nil, err
+	}
+
+	reply := <-rchan
+	return reply, nil
+}
+
+func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
+	si.reqLock.Lock()
+	defer si.reqLock.Unlock()
+
+	si.pushRespChan(rchan)
+
+	msg := &RPCMessage{MessageID: msgID(), Methods: []byte(string(req))}
+	err = si.enc.Encode(msg)
+	if err != nil {
+		return err
 	}
 	err = si.enc.ncEncoder.EndOfMessage()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return nil, nil
-}
-
-func (si *sesImpl) ExecuteAsync(req Request) (resp <-chan *Response, err error) {
-	return nil, nil
+	return nil
 }
 
 func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
@@ -164,7 +175,6 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 		}
 		switch token := token.(type) {
 		case xml.StartElement:
-			fmt.Printf("Start token name:%v\n", token.Name)
 			switch token.Name {
 			case nameHello: // <hello>
 				hello := HelloMessage{}
@@ -174,18 +184,51 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 				}
 				hch <- &hello
 			case nameRPCReply: // <rpc-reply>
-				fmt.Println("saw <rpc-reply>")
 				reply := RPCReply{}
 				if err := si.dec.DecodeElement(&reply, &token); err != nil {
 					si.evtlog.Printf("DecodeElement() error: %v\n", err)
 					return
 				}
-				fmt.Printf("Reply:%v\n", reply)
+				si.popRespChan() <- &reply
+
 			case notification: // <notification>
 				fmt.Println("saw <notification>")
 			}
 		}
 	}
+}
+
+func (si *sesImpl) allocChan() (ch chan *RPCReply) {
+	si.pchLock.Lock()
+	defer si.pchLock.Unlock()
+
+	l := len(si.pool)
+	if l == 0 {
+		return make(chan *RPCReply)
+	}
+
+	si.pool, ch = si.pool[:l-1], si.pool[l-1]
+	return
+}
+
+func (si *sesImpl) relChan(ch chan *RPCReply) {
+	si.pchLock.Lock()
+	defer si.pchLock.Unlock()
+	si.pool = append(si.pool, ch)
+}
+
+func (si *sesImpl) pushRespChan(ch chan *RPCReply) {
+	si.rchLock.Lock()
+	defer si.rchLock.Unlock()
+	si.responseq = append(si.responseq, ch)
+}
+
+func (si *sesImpl) popRespChan() (ch chan *RPCReply) {
+	si.rchLock.Lock()
+	defer si.rchLock.Unlock()
+	l := len(si.responseq)
+	si.responseq, ch = si.responseq[:l-1], si.responseq[l-1]
+	return
 }
 
 func newDecoder(t Transport) *decoder {
