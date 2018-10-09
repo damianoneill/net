@@ -1,7 +1,6 @@
 package rfc6242
 
 import (
-	"fmt"
 	"io"
 	"strconv"
 )
@@ -36,8 +35,6 @@ func (e *Encoder) Write(b []byte) (n int, err error) {
 	if len(b) == 0 {
 		return 0, nil
 	}
-	encoding := string(b)
-	fmt.Printf("encoding:%s\n", encoding)
 	if e.ChunkedFraming {
 		return e.writeChunked(b)
 	}

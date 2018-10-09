@@ -141,7 +141,6 @@ func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	reply := <-rchan
 	return reply, nil
 }
@@ -149,10 +148,10 @@ func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
 	si.reqLock.Lock()
 	defer si.reqLock.Unlock()
+	msg := &RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
 
 	si.pushRespChan(rchan)
 
-	msg := &RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
 	err = si.enc.Encode(msg)
 	if err != nil {
 		return err
@@ -198,7 +197,11 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 					si.evtlog.Printf("DecodeElement() error: %v\n", err)
 					return
 				}
-				si.popRespChan() <- &reply
+
+				respch := si.popRespChan()
+				go func(ch chan *RPCReply, r *RPCReply) {
+					ch <- r
+				}(respch, &reply)
 
 			case notification: // <notification>
 				fmt.Println("saw <notification>")
@@ -230,13 +233,13 @@ func (si *sesImpl) pushRespChan(ch chan *RPCReply) {
 	si.rchLock.Lock()
 	defer si.rchLock.Unlock()
 	si.responseq = append(si.responseq, ch)
+
 }
 
 func (si *sesImpl) popRespChan() (ch chan *RPCReply) {
 	si.rchLock.Lock()
 	defer si.rchLock.Unlock()
-	l := len(si.responseq)
-	si.responseq, ch = si.responseq[:l-1], si.responseq[l-1]
+	si.responseq, ch = si.responseq[1:], si.responseq[0]
 	return
 }
 
