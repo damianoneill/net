@@ -55,6 +55,7 @@ type RPCError struct {
 type Session interface {
 	Execute(req Request) (*RPCReply, error)
 	ExecuteAsync(req Request, rchan chan *RPCReply) (err error)
+	Close()
 }
 
 type sesImpl struct {
@@ -161,6 +162,13 @@ func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
 		return err
 	}
 	return nil
+}
+
+func (si *sesImpl) Close() {
+	err := si.t.Close()
+	if err != nil {
+		si.evtlog.Printf("Session close failed %v\n", err)
+	}
 }
 
 func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
