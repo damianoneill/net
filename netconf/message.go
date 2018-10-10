@@ -55,6 +55,7 @@ type RPCError struct {
 type Session interface {
 	Execute(req Request) (*RPCReply, error)
 	ExecuteAsync(req Request, rchan chan *RPCReply) (err error)
+	// Subscribe(req Request, nchan chan *Notification) (err error)
 	Close()
 }
 
@@ -211,7 +212,24 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 				}(respch, &reply)
 
 			case notification: // <notification>
-				fmt.Println("saw <notification>")
+				type NotificationEvent struct {
+					XMLName xml.Name
+					Data    string `xml:",innerxml"`
+				}
+				type Notification struct {
+					XMLName   xml.Name          //`xml:"notification"`
+					EventTime string            `xml:"eventTime"`
+					Event     NotificationEvent `xml:",any"`
+				}
+				result := &Notification{}
+				_ = si.dec.DecodeElement(result, &token)
+				n := fmt.Sprintf(`<%s xmlns="%s">%s</%s>`,
+					result.Event.XMLName.Local, result.Event.XMLName.Space, result.Event.Data, result.Event.XMLName.Local)
+				fmt.Printf("saw <notification> %s\n", n)
+
+			default:
+				fmt.Printf("Unexpected element:%v\n", token.Name)
+
 			}
 		}
 	}

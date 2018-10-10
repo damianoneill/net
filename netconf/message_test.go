@@ -9,10 +9,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	mocks "github.com/damianoneill/net/netconf/mocks"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
 
 func TestNewSession(t *testing.T) {
@@ -265,34 +267,61 @@ func rpcReply(body string) []byte {
 
 // Simple real NE access test
 
-// func TestRealNewSession(t *testing.T) {
+func TestRealNewSession(t *testing.T) {
 
-// 	sshConfig := &ssh.ClientConfig{
-// 		User:            "WRuser",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
-// 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-// 	}
+	sshConfig := &ssh.ClientConfig{
+		User:            "WRuser",
+		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
 
-// 	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
-// 	assert.NoError(t, err, "Not expecting new transport to fail")
-// 	defer tr.Close()
+	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+	assert.NoError(t, err, "Not expecting new transport to fail")
+	defer tr.Close()
 
-// 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-// 	ncs, err := NewSession(tr, l, l)
-// 	assert.NoError(t, err, "Not expecting new session to fail")
-// 	assert.NotNil(t, ncs, "Session should be non-nil")
+	l := log.New(os.Stderr, "logger:", log.Lshortfile)
+	ncs, err := NewSession(tr, l, l)
+	assert.NoError(t, err, "Not expecting new session to fail")
+	assert.NotNil(t, ncs, "Session should be non-nil")
 
-// 	var wg sync.WaitGroup
-// 	for n := 0; n < 1; n++ {
-// 		wg.Add(1)
-// 		go func(z int) {
-// 			defer wg.Done()
-// 			for c := 0; c < 1; c++ {
-// 				reply, err := ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
-// 				assert.NoError(t, err, "Not expecting exec to fail")
-// 				assert.NotNil(t, reply, "Reply should be non-nil")
-// 			}
-// 		}(n)
-// 	}
-// 	wg.Wait()
-// }
+	var wg sync.WaitGroup
+	for n := 0; n < 1; n++ {
+		wg.Add(1)
+		go func(z int) {
+			defer wg.Done()
+			for c := 0; c < 1; c++ {
+				reply, err := ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+				assert.NoError(t, err, "Not expecting exec to fail")
+				assert.NotNil(t, reply, "Reply should be non-nil")
+			}
+		}(n)
+	}
+	wg.Wait()
+}
+
+func TestRealSubscription(t *testing.T) {
+
+	sshConfig := &ssh.ClientConfig{
+		User:            "WRuser",
+		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+	assert.NoError(t, err, "Not expecting new transport to fail")
+	defer tr.Close()
+
+	l := log.New(os.Stderr, "logger:", log.Lshortfile)
+	ncs, err := NewSession(tr, l, l)
+	assert.NoError(t, err, "Not expecting new session to fail")
+	assert.NotNil(t, ncs, "Session should be non-nil")
+
+	reply, err := ncs.Execute(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`))
+	assert.NoError(t, err, "Not expecting exec to fail")
+	assert.NotNil(t, reply, "Reply should be non-nil")
+
+	go NewSession(tr, l, l)
+	time.Sleep(time.Second * time.Duration(5))
+	assert.Nil(t, reply, "Force failure")
+
+}
