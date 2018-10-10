@@ -125,11 +125,11 @@ func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, er
 
 	sess.hello = <-hch
 	helloresp := &HelloMessage{Capabilities: DefaultCapabilities}
+	chunkedFraming := false
 	for _, capability := range sess.hello.Capabilities {
 		if capability == capBase11 {
-			// rfc6242.SetChunkedFraming(sess.dec.ncDecoder, sess.enc.ncEncoder)
-			// helloresp.Capabilities = []string{capBase11}
-			// fmt.Println("upgraded to :base:1.1 chunked-message framing")
+			helloresp.Capabilities = []string{capBase11}
+			chunkedFraming = true
 			break
 		}
 	}
@@ -137,6 +137,10 @@ func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, er
 	err := sess.enc.encode(helloresp)
 	if err != nil {
 		return nil, err
+	}
+
+	if chunkedFraming {
+		rfc6242.SetChunkedFraming(sess.dec.ncDecoder, sess.enc.ncEncoder)
 	}
 
 	return sess, nil
