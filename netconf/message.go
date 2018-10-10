@@ -80,8 +80,21 @@ type decoder struct {
 }
 
 type encoder struct {
-	*xml.Encoder
-	ncEncoder *rfc6242.Encoder
+	xmlEncoder *xml.Encoder
+	ncEncoder  *rfc6242.Encoder
+}
+
+func (e *encoder) encode(msg interface{}) error {
+
+	err := e.xmlEncoder.Encode(msg)
+	if err != nil {
+		return err
+	}
+	err = e.ncEncoder.EndOfMessage()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // DefaultCapabilities sets the default capabilities of the client library
@@ -121,14 +134,11 @@ func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, er
 		}
 	}
 
-	err := sess.enc.Encode(helloresp)
+	err := sess.enc.encode(helloresp)
 	if err != nil {
 		return nil, err
 	}
-	err = sess.enc.ncEncoder.EndOfMessage()
-	if err != nil {
-		return nil, err
-	}
+
 	return sess, nil
 }
 
@@ -152,15 +162,8 @@ func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
 
 	si.pushRespChan(rchan)
 
-	err = si.enc.Encode(msg)
-	if err != nil {
-		return err
-	}
-	err = si.enc.ncEncoder.EndOfMessage()
-	if err != nil {
-		return err
-	}
-	return nil
+	return si.enc.encode(msg)
+
 }
 
 func (si *sesImpl) Close() {
@@ -250,5 +253,5 @@ func newDecoder(t Transport) *decoder {
 
 func newEncoder(t Transport) *encoder {
 	ncEncoder := rfc6242.NewEncoder(t)
-	return &encoder{Encoder: xml.NewEncoder(ncEncoder), ncEncoder: ncEncoder}
+	return &encoder{xmlEncoder: xml.NewEncoder(ncEncoder), ncEncoder: ncEncoder}
 }
