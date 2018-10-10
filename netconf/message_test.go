@@ -98,7 +98,7 @@ func TestConcurrentExecute(t *testing.T) {
 	ncs, _ := NewSession(mockt, l, l)
 
 	var wg sync.WaitGroup
-	for r := 0; r < 50; r++ {
+	for r := 0; r < 10; r++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -128,7 +128,7 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 	ncs, _ := NewSession(mockt, l, l)
 
 	var wg sync.WaitGroup
-	for r := 0; r < 50; r++ {
+	for r := 0; r < 10; r++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
