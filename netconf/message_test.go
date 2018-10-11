@@ -33,7 +33,23 @@ func TestNewSession(t *testing.T) {
 
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
-	assert.NotNil(t, ms.hello, "Should have received hello")
+	assert.NotNil(t, ms.clientHello, "Should have received hello")
+	assert.Equal(t, ms.clientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
+
+	ncs.Close()
+}
+
+func TestNewSessionWithChunkedEncoding(t *testing.T) {
+
+	ms := newMockServerWithBase(CapBase11)
+	ms.closeConnection()
+
+	ncs, err := NewSession(ms.transport, testLogger, testLogger)
+
+	assert.NoError(t, err, "Not expecting new session to fail")
+	assert.NotNil(t, ncs, "Session should be non-nil")
+	assert.NotNil(t, ms.clientHello, "Should have received hello")
+	assert.Equal(t, ms.clientHello.Capabilities, []string{CapBase11}, "Did not send expected server capabilities")
 
 	ncs.Close()
 }
@@ -185,10 +201,14 @@ func extractRequestBody(buf []byte) string {
 }
 
 func serverHello() string {
+	return serverHelloWithBase(`urn:ietf:params:netconf:base:1.0`)
+}
+
+func serverHelloWithBase(base string) string {
 	return `<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">` +
 		`<capabilities>` +
 		`<capability>` +
-		`urn:ietf:params:netconf:base:1.0` +
+		base +
 		`</capability>` +
 		`<capability>` +
 		`urn:ietf:params:netconf:capability:startup:1.0` +
@@ -228,14 +248,18 @@ func notificationEvent() string {
 }
 
 type mockServer struct {
-	transport *mocks.Transport
-	hello     HelloMessage
+	transport   *mocks.Transport
+	clientHello HelloMessage
 }
 
 func newMockServer() *mockServer {
+	return newMockServerWithBase(CapBase10)
+}
+
+func newMockServerWithBase(capbase string) *mockServer {
 	ms := &mockServer{transport: &mocks.Transport{}}
-	ms.sendMessage(serverHello()).Once()
-	ms.captureMessage(&ms.hello)
+	ms.sendMessage(serverHelloWithBase(capbase)).Once()
+	ms.captureMessage(&ms.clientHello)
 	ms.transport.On("Close").Return(nil)
 	return ms
 }

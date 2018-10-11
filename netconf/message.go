@@ -68,7 +68,7 @@ func (e *encoder) encode(msg interface{}) error {
 
 // DefaultCapabilities sets the default capabilities of the client library
 var DefaultCapabilities = []string{
-	"urn:ietf:params:netconf:base:1.0",
+	CapBase10,
 }
 
 var (
@@ -77,8 +77,8 @@ var (
 	nameHello       = xml.Name{Space: netconfNS, Local: "hello"}
 	nameRPCReply    = xml.Name{Space: netconfNS, Local: "rpc-reply"}
 	notification    = xml.Name{Space: netconfNotifyNS, Local: "notification"}
-	// :base:1.1 protocol capability
-	capBase11 = "urn:ietf:params:netconf:base:1.1"
+	CapBase10       = "urn:ietf:params:netconf:base:1.0"
+	CapBase11       = "urn:ietf:params:netconf:base:1.1"
 )
 
 // NewSession creates a new Netconf session, using the supplied Transport.
@@ -96,8 +96,8 @@ func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, er
 	helloresp := &HelloMessage{Capabilities: DefaultCapabilities}
 	chunkedFraming := false
 	for _, capability := range sess.hello.Capabilities {
-		if capability == capBase11 {
-			helloresp.Capabilities = []string{capBase11}
+		if capability == CapBase11 {
+			helloresp.Capabilities = []string{CapBase11}
 			chunkedFraming = true
 			break
 		}
