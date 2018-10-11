@@ -7,7 +7,7 @@ import (
 )
 
 // Define encoder and decoder that wrap the standard xml Codec (for XML en/decoding)
-// and RFC6242-compliant Codec (for netconf message en/decoding)
+// and RFC6242-compliant Codec (for netconf message framing)
 
 type decoder struct {
 	*xml.Decoder
@@ -40,4 +40,8 @@ func newDecoder(t Transport) *decoder {
 func newEncoder(t Transport) *encoder {
 	ncEncoder := rfc6242.NewEncoder(t)
 	return &encoder{xmlEncoder: xml.NewEncoder(ncEncoder), ncEncoder: ncEncoder}
+}
+
+func enableChunkedFraming(d *decoder, e *encoder) {
+	rfc6242.SetChunkedFraming(d.ncDecoder, e.ncEncoder)
 }

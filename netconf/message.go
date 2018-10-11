@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 
 	"github.com/satori/go.uuid"
@@ -9,8 +10,6 @@ import (
 	"io"
 	"log"
 	"sync"
-
-	"github.com/damianoneill/net/netconf/rfc6242"
 )
 
 // The Operations layer defines a set of base protocol operations
@@ -70,71 +69,58 @@ var (
 // NewSession creates a new Netconf session, using the supplied Transport.
 func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, error) {
 
-	dec := newDecoder(t)
-	enc := newEncoder(t)
+	si := &sesImpl{t: t, dec: newDecoder(t), enc: newEncoder(t), evtlog: evtlog, nclog: nclog, hellochan: make(chan *HelloMessage)}
 
-	sess := &sesImpl{t: t, dec: dec, enc: enc, evtlog: evtlog, nclog: nclog, hellochan: make(chan *HelloMessage)}
+	// Launch goroutine to handle incoming messages from the server.
+	go si.handleIncomingMessages()
 
-	go sess.handleInput()
-
-	sess.hello = <-sess.hellochan
-
-	helloresp := &HelloMessage{Capabilities: DefaultCapabilities}
-	chunkedFraming := false
-	for _, capability := range sess.hello.Capabilities {
-		if capability == CapBase11 {
-			helloresp.Capabilities = []string{CapBase11}
-			chunkedFraming = true
-			break
-		}
-	}
-
-	err := sess.enc.encode(helloresp)
+	err := si.exchangeHelloMessages()
 	if err != nil {
+		si.Close()
 		return nil, err
 	}
-
-	if chunkedFraming {
-		rfc6242.SetChunkedFraming(sess.dec.ncDecoder, sess.enc.ncEncoder)
-	}
-
-	return sess, nil
+	return si, nil
 }
 
 func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
 
+	// Allocate a response channel
 	rchan := si.allocChan()
 	defer si.relChan(rchan)
 
+	// Submit the request
 	err := si.ExecuteAsync(req, rchan)
 	if err != nil {
 		return nil, err
 	}
+
+	// Wait for the response.
 	reply := <-rchan
 	return reply, nil
 }
 
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
-	si.reqLock.Lock()
-	defer si.reqLock.Unlock()
+
+	// Build the request to be submitted.
 	msg := &RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
 
-	si.pushRespChan(rchan)
+	// Lock the request channel, so the request and response channel set up is atomic.
+	si.reqLock.Lock()
+	defer si.reqLock.Unlock()
 
-	return si.enc.encode(msg)
+	// Add the response channel to the response queue, but take it off if the request was not
+	// submitted successfully.
+	si.pushRespChan(rchan)
+	if err = si.enc.encode(msg); err != nil {
+		si.popRespChan()
+	}
+	return
 }
 
 func (si *sesImpl) Subscribe(req Request, nchan chan *Notification) (reply *RPCReply, err error) {
-	rchan := si.allocChan()
-	defer si.relChan(rchan)
-
-	err = si.ExecuteAsync(req, rchan)
-	if err != nil {
-		return
-	}
+	// Store the notification channel for the session.
 	si.subchan = nchan
-	reply = <-rchan
-	return
+	return si.Execute(req)
 }
 
 func (si *sesImpl) Close() {
@@ -144,9 +130,51 @@ func (si *sesImpl) Close() {
 	}
 }
 
-func (si *sesImpl) handleInput() {
+func (si *sesImpl) exchangeHelloMessages() (err error) {
 
+	// Wait for the input handler to send the server hello.
+	si.hello = <-si.hellochan
+	if si.hello == nil {
+		return errors.New("Failed to get Hello from server")
+	}
+
+	// Set client capabilities, depending on whether server supports chunked framing.
+	helloresp := &HelloMessage{Capabilities: DefaultCapabilities}
+	chunkedFraming := serverSupportsChunkedFraming(si.hello)
+	if chunkedFraming {
+		helloresp.Capabilities = []string{CapBase11}
+	}
+
+	// Send client capabilities to server.
+	err = si.enc.encode(helloresp)
+	if err != nil {
+		return
+	}
+
+	// Update the codec to use chunked framing from now.
+	if chunkedFraming {
+		enableChunkedFraming(si.dec, si.enc)
+	}
+
+	return
+}
+
+func serverSupportsChunkedFraming(hello *HelloMessage) bool {
+	for _, capability := range hello.Capabilities {
+		if capability == CapBase11 {
+			return true
+		}
+	}
+	return false
+}
+
+func (si *sesImpl) handleIncomingMessages() {
+
+	// When this goroutine finishes, make sure anytbody waiting for an async response or notification
+	// gets informed.
 	defer si.closeChannels()
+
+	// Loop, looking for a start element type of hello, rpc-reply or notification.
 	for {
 		token, err := si.dec.Token()
 		if err != nil {
@@ -155,44 +183,87 @@ func (si *sesImpl) handleInput() {
 			}
 			break
 		}
+
 		switch token := token.(type) {
 		case xml.StartElement:
 			switch token.Name {
 			case nameHello: // <hello>
-				hello := HelloMessage{}
-				if err := si.dec.DecodeElement(&hello, &token); err != nil {
-					si.evtlog.Printf("DecodeElement() error: %v\n", err)
-					return
-				}
-				si.hellochan <- &hello
-			case nameRPCReply: // <rpc-reply>
-				reply := RPCReply{}
-				if err := si.dec.DecodeElement(&reply, &token); err != nil {
-					si.evtlog.Printf("DecodeElement() error: %v\n", err)
+				if si.handleHello(token) != nil {
 					return
 				}
 
-				respch := si.popRespChan()
-				go func(ch chan *RPCReply, r *RPCReply) {
-					ch <- r
-				}(respch, &reply)
+			case nameRPCReply: // <rpc-reply>
+				if si.handleRPCReply(token) != nil {
+					return
+				}
 
 			case notification: // <notification>
-
-				result := &NotificationMessage{}
-				_ = si.dec.DecodeElement(result, &token)
-				n := fmt.Sprintf(`<%s xmlns="%s">%s</%s>`,
-					result.Event.XMLName.Local, result.Event.XMLName.Space, result.Event.Event, result.Event.XMLName.Local)
-				if si.subchan != nil {
-					si.subchan <- &Notification{XMLName: result.Event.XMLName, EventTime: result.EventTime, Event: n}
+				if si.handleNotification(token) != nil {
+					return
 				}
 
 			default:
 				fmt.Printf("Unexpected element:%v\n", token.Name)
-
+				si.dec.Skip()
 			}
 		}
 	}
+}
+
+func (si *sesImpl) handleHello(token xml.StartElement) (err error) {
+	// Decode the hello element and send it down the channel to trigger the rest of the session setup.
+	hello := HelloMessage{}
+	if err = si.decodeElement(&hello, &token); err != nil {
+		return
+	}
+	si.hellochan <- &hello
+	return
+}
+
+func (si *sesImpl) handleRPCReply(token xml.StartElement) (err error) {
+	reply := RPCReply{}
+	if err = si.decodeElement(&reply, &token); err != nil {
+		return
+	}
+
+	// Pop the channel off the head of the queue and send the reply to it.
+	respch := si.popRespChan()
+	go func(ch chan *RPCReply, r *RPCReply) {
+		ch <- r
+	}(respch, &reply)
+	return
+}
+
+func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
+	result := &NotificationMessage{}
+	if err = si.decodeElement(&result, &token); err != nil {
+		return
+	}
+
+	// Send notification to subscription channel, if it's defined and not full.
+	if si.subchan != nil {
+		notification := buildNotification(result)
+		select {
+		case si.subchan <- notification:
+		default:
+			si.evtlog.Printf("Dropping notification %s\n", notification.XMLName.Local)
+		}
+	}
+	return
+}
+
+func buildNotification(nmsg *NotificationMessage) *Notification {
+	event := fmt.Sprintf(`<%s xmlns="%s">%s</%s>`,
+		nmsg.Event.XMLName.Local, nmsg.Event.XMLName.Space, nmsg.Event.Event, nmsg.Event.XMLName.Local)
+	notification := &Notification{XMLName: nmsg.Event.XMLName, EventTime: nmsg.EventTime, Event: event}
+	return notification
+}
+
+func (si *sesImpl) decodeElement(v interface{}, start *xml.StartElement) (err error) {
+	if err = si.dec.DecodeElement(v, start); err != nil {
+		si.evtlog.Printf("DecodeElement() token:%s error: %v\n", start.Name.Local, err)
+	}
+	return
 }
 
 func (si *sesImpl) closeChannels() {
@@ -201,6 +272,16 @@ func (si *sesImpl) closeChannels() {
 		close(si.subchan)
 	}
 	si.closeAllResponseChannels()
+}
+
+func (si *sesImpl) closeAllResponseChannels() {
+	for {
+		if ch := si.popRespChan(); ch != nil {
+			close(ch)
+		} else {
+			return
+		}
+	}
 }
 
 func (si *sesImpl) allocChan() (ch chan *RPCReply) {
@@ -236,14 +317,4 @@ func (si *sesImpl) popRespChan() (ch chan *RPCReply) {
 		si.responseq, ch = si.responseq[1:], si.responseq[0]
 	}
 	return
-}
-
-func (si *sesImpl) closeAllResponseChannels() {
-	for {
-		if ch := si.popRespChan(); ch != nil {
-			close(ch)
-		} else {
-			return
-		}
-	}
 }
