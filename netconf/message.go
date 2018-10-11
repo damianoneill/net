@@ -254,8 +254,12 @@ func (si *sesImpl) popRespChan() (ch chan *RPCReply) {
 }
 
 func (si *sesImpl) closeAllResponseChannels() {
-	for ch := si.popRespChan(); ch != nil; {
-		close(ch)
+	for {
+		if ch := si.popRespChan(); ch != nil {
+			close(ch)
+		} else {
+			return
+		}
 	}
 }
 

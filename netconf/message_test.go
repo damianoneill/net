@@ -89,6 +89,20 @@ func TestExecuteAsync(t *testing.T) {
 	assert.Equal(t, `<data><test1/></data>`, reply.Data, "Reply should contain response data")
 }
 
+func TestExecuteAsyncUnfulfilled(t *testing.T) {
+
+	ms := newMockServer()
+	ms.ignoreRequest()
+
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+
+	rch1 := make(chan *RPCReply)
+	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+
+	reply := <-rch1
+	assert.Nil(t, reply, "Reply should be nil")
+}
+
 func TestSubscribe(t *testing.T) {
 
 	ms := newMockServer()
@@ -309,6 +323,24 @@ func (ms *mockServer) replyToNRequests(count int) {
 	if count > 0 {
 		call.Times(count * 2)
 	}
+}
+
+func (ms *mockServer) ignoreRequest() {
+	ch := make(chan bool)
+	wcount := 0
+	_ = ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
+		_ = <-ch
+		return 0
+	}, io.EOF)
+
+	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
+		if wcount == 0 {
+			ch <- true
+			wcount++
+		}
+		return len(buf)
+	}, nil).Twice()
+
 }
 
 func (ms *mockServer) closeConnection() {
