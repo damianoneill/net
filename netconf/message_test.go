@@ -1,6 +1,7 @@
 package netconf
 
 import (
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log"
@@ -15,40 +16,34 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
+var (
+	testLogger = log.New(os.Stderr, "logger:", log.Lshortfile)
+)
+
+const (
+	endOfMessage = `]]>]]>`
+)
+
 func TestNewSession(t *testing.T) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.closeConnection()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	mockt.On("Read", mock.Anything).Return(0, io.EOF)
-
-	hellobuf := expectToSendMessage(mockt)
-
-	ncs, err := NewSession(mockt, l, l)
+	ncs, err := NewSession(ms.transport, testLogger, testLogger)
 
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
-	assert.Contains(t, string(*hellobuf), "<hello ")
-	assert.Contains(t, string(*hellobuf), "]]>]]>")
+	assert.NotNil(t, ms.hello, "Should have received hello")
 
-	mockt.On("Close").Return(nil)
 	ncs.Close()
 }
 
 func TestExecute(t *testing.T) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToRequests()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 0)
-
-	ncs, err := NewSession(mockt, l, l)
+	ncs, err := NewSession(ms.transport, testLogger, testLogger)
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
@@ -58,16 +53,10 @@ func TestExecute(t *testing.T) {
 
 func TestExecuteAsync(t *testing.T) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToRequests()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 0)
-
-	ncs, _ := NewSession(mockt, l, l)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	rch1 := make(chan *RPCReply)
 	rch2 := make(chan *RPCReply)
@@ -86,17 +75,12 @@ func TestExecuteAsync(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToNRequests(1)
+	ms.sendMessage(notificationMessage())
+	ms.closeConnection()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 1)
-	expectToReadOneNotification(mockt, notificationMessage())
-
-	ncs, _ := NewSession(mockt, l, l)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	nch := make(chan *Notification)
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
@@ -112,21 +96,14 @@ func TestSubscribe(t *testing.T) {
 
 	result = <-nch
 	assert.Nil(t, result, "No more notifications expected")
-
 }
 
 func TestConcurrentExecute(t *testing.T) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToRequests()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 0)
-
-	ncs, _ := NewSession(mockt, l, l)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	var wg sync.WaitGroup
 	for r := 0; r < 10; r++ {
@@ -147,16 +124,10 @@ func TestConcurrentExecute(t *testing.T) {
 
 func TestConcurrentExecuteAsync(t *testing.T) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToRequests()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 0)
-
-	ncs, _ := NewSession(mockt, l, l)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	var wg sync.WaitGroup
 	for r := 0; r < 10; r++ {
@@ -180,16 +151,10 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 
 func BenchmarkExecute(b *testing.B) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToRequests()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 0)
-
-	ncs, _ := NewSession(mockt, l, l)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	for n := 0; n < b.N; n++ {
 		ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
@@ -198,77 +163,16 @@ func BenchmarkExecute(b *testing.B) {
 
 func BenchmarkTemplateParallel(b *testing.B) {
 
-	mockt := &mocks.Transport{}
+	ms := newMockServer()
+	ms.replyToRequests()
 
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-
-	expectToReadServerHello(mockt)
-	_ = expectToSendMessage(mockt)
-
-	expectToReplyToNRequests(mockt, 0)
-
-	ncs, _ := NewSession(mockt, l, l)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
 		}
 	})
-}
-
-func expectToReplyToRequest(mockt *mocks.Transport) {
-	expectToReplyToNRequests(mockt, 1)
-}
-
-func expectToReplyToNRequests(mockt *mocks.Transport, n int) {
-	ch := make(chan string)
-
-	call := mockt.On("Read", mock.Anything).Return(func(buf []byte) int {
-		body := <-ch
-		i := rpcReply(body)
-		copy(buf, i)
-		return len(i)
-	}, nil)
-	if n > 0 {
-		call.Times(n)
-	}
-
-	var body string
-	call = mockt.On("Write", mock.Anything).Return(func(buf []byte) int {
-		if strings.Contains(string(buf), "]]>]]>") {
-			ch <- body
-		} else {
-			// Remember body so that we can build it into the reply
-			body = extractRequestBody(buf)
-		}
-		return len(buf)
-	}, nil)
-}
-
-func expectToReadServerHello(mockt *mocks.Transport) {
-	mockt.On("Read", mock.Anything).Return(func(buf []byte) int {
-		i := serverHello()
-		copy(buf, i)
-		return len(i)
-	}, nil).Once()
-}
-
-func expectToReadOneNotification(mockt *mocks.Transport, n string) {
-	mockt.On("Read", mock.Anything).Return(func(buf []byte) int {
-		i := []byte(n)
-		copy(buf, i)
-		return len(i)
-	}, nil).Once()
-	mockt.On("Read", mock.Anything).Return(0, io.EOF)
-}
-
-func expectToSendMessage(mockt *mocks.Transport) *[]byte {
-	var msg []byte
-	mockt.On("Write", mock.Anything).Return(func(buf []byte) int {
-		msg = append(msg, buf...)
-		return len(buf)
-	}, nil).Twice()
-	return &msg
 }
 
 func extractRequestBody(buf []byte) string {
@@ -280,8 +184,8 @@ func extractRequestBody(buf []byte) string {
 	return ""
 }
 
-func serverHello() []byte {
-	return []byte(`<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">` +
+func serverHello() string {
+	return `<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">` +
 		`<capabilities>` +
 		`<capability>` +
 		`urn:ietf:params:netconf:base:1.0` +
@@ -294,28 +198,25 @@ func serverHello() []byte {
 		`</capability>` +
 		`</capabilities>` +
 		`<session-id>4</session-id>` +
-		`</hello>` +
-		`]]>]]>`)
+		`</hello>`
 }
 
-func rpcReply(body string) []byte {
-	return []byte(` <rpc-reply message-id="101"` +
+func rpcReply(body string) string {
+	return ` <rpc-reply message-id="101"` +
 		`xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"` +
 		`xmlns:ex="http://example.net/content/1.0"` +
 		`ex:user-id="fred">` +
 		`<data>` +
 		body +
 		`</data>` +
-		`</rpc-reply>` +
-		`]]>]]>`)
+		`</rpc-reply>`
 }
 
 func notificationMessage() string {
 	return `<notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">` +
 		`<eventTime>2018-10-10T09:23:07Z</eventTime>` +
 		notificationEvent() +
-		`</notification>` +
-		`]]>]]>`
+		`</notification>`
 }
 
 func notificationEvent() string {
@@ -324,6 +225,70 @@ func notificationEvent() string {
 		`<session-id>321</session-id>` +
 		`<source-host>172.26.136.66</source-host>` +
 		`</netconf-session-start>`
+}
+
+type mockServer struct {
+	transport *mocks.Transport
+	hello     HelloMessage
+}
+
+func newMockServer() *mockServer {
+	ms := &mockServer{transport: &mocks.Transport{}}
+	ms.sendMessage(serverHello()).Once()
+	ms.captureMessage(&ms.hello)
+	ms.transport.On("Close").Return(nil)
+	return ms
+}
+
+func (ms *mockServer) sendMessage(msg string) *mock.Call {
+	return ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
+		i := []byte(msg + endOfMessage)
+		copy(buf, i)
+		return len(i)
+	}, nil).Once()
+}
+
+func (ms *mockServer) captureMessage(msg interface{}) {
+	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
+		xml.Unmarshal(buf, msg)
+		return len(buf)
+	}, nil).Once()
+	// Ignore the end of message delimiter.
+	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
+		return len(buf)
+	}, nil).Once()
+}
+
+func (ms *mockServer) replyToRequests() {
+	ms.replyToNRequests(0)
+}
+
+func (ms *mockServer) replyToNRequests(count int) {
+	ch := make(chan string)
+
+	call := ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
+		body := <-ch
+		i := []byte(rpcReply(body) + endOfMessage)
+		copy(buf, i)
+		return len(i)
+	}, nil)
+	if count > 0 {
+		call.Times(count)
+	}
+
+	call = ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
+		if !strings.Contains(string(buf), "]]>]]>") {
+			ch <- extractRequestBody(buf)
+		}
+		return len(buf)
+	}, nil)
+	if count > 0 {
+		call.Times(count * 2)
+	}
+}
+
+func (ms *mockServer) closeConnection() {
+	ms.transport.On("Read", mock.Anything).Return(0, io.EOF)
 }
 
 // Simple real NE access tests
