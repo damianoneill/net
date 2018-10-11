@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	mocks "github.com/damianoneill/net/netconf/mocks"
 	"github.com/stretchr/testify/mock"
@@ -99,6 +100,21 @@ func TestExecuteAsyncUnfulfilled(t *testing.T) {
 	rch1 := make(chan *RPCReply)
 	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
 
+	reply := <-rch1
+	assert.Nil(t, reply, "Reply should be nil")
+}
+
+func TestExecuteAsyncInterrupted(t *testing.T) {
+
+	ms := newMockServer()
+	ms.longRunningRequest()
+
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+
+	rch1 := make(chan *RPCReply)
+	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+
+	time.AfterFunc(time.Second*time.Duration(2), func() { ncs.Close() })
 	reply := <-rch1
 	assert.Nil(t, reply, "Reply should be nil")
 }
@@ -264,6 +280,7 @@ func notificationEvent() string {
 type mockServer struct {
 	transport   *mocks.Transport
 	clientHello HelloMessage
+	rwSynch     chan interface{}
 }
 
 func newMockServer() *mockServer {
@@ -271,10 +288,13 @@ func newMockServer() *mockServer {
 }
 
 func newMockServerWithBase(capbase string) *mockServer {
-	ms := &mockServer{transport: &mocks.Transport{}}
+	ms := &mockServer{transport: &mocks.Transport{}, rwSynch: make(chan interface{})}
 	ms.sendMessage(serverHelloWithBase(capbase)).Once()
 	ms.captureMessage(&ms.clientHello)
-	ms.transport.On("Close").Return(nil)
+	ms.transport.On("Close").Return(func() error {
+		close(ms.rwSynch)
+		return nil
+	})
 	return ms
 }
 
@@ -302,11 +322,10 @@ func (ms *mockServer) replyToRequests() {
 }
 
 func (ms *mockServer) replyToNRequests(count int) {
-	ch := make(chan string)
 
 	call := ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		body := <-ch
-		i := []byte(rpcReply(body) + endOfMessage)
+		body := <-ms.rwSynch
+		i := []byte(rpcReply(body.(string)) + endOfMessage)
 		copy(buf, i)
 		return len(i)
 	}, nil)
@@ -316,7 +335,7 @@ func (ms *mockServer) replyToNRequests(count int) {
 
 	call = ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
 		if !strings.Contains(string(buf), "]]>]]>") {
-			ch <- extractRequestBody(buf)
+			ms.rwSynch <- extractRequestBody(buf)
 		}
 		return len(buf)
 	}, nil)
@@ -326,21 +345,35 @@ func (ms *mockServer) replyToNRequests(count int) {
 }
 
 func (ms *mockServer) ignoreRequest() {
-	ch := make(chan bool)
 	wcount := 0
 	_ = ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		_ = <-ch
+		_ = <-ms.rwSynch
 		return 0
 	}, io.EOF)
 
 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
 		if wcount == 0 {
-			ch <- true
+			ms.rwSynch <- true
 			wcount++
 		}
 		return len(buf)
 	}, nil).Twice()
+}
 
+func (ms *mockServer) longRunningRequest() {
+	wcount := 0
+	_ = ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
+		_ = <-ms.rwSynch
+		return 0
+	}, io.EOF)
+
+	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
+		if wcount == 0 {
+			time.AfterFunc(time.Minute, func() { ms.rwSynch <- true })
+			wcount++
+		}
+		return len(buf)
+	}, nil).Twice()
 }
 
 func (ms *mockServer) closeConnection() {

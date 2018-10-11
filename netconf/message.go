@@ -18,9 +18,18 @@ import (
 
 // Session represents a Netconf Session
 type Session interface {
+	// Execute executes an RPC request on the server and returns the reply.
 	Execute(req Request) (*RPCReply, error)
+
+	// ExecuteAsync submits an RPC request for execution on the server, arranging for the
+	// reply to be sent to the supplied channel.
 	ExecuteAsync(req Request, rchan chan *RPCReply) (err error)
+
+	// Subscribe issues an RPC request and returns the reply. If successful, notifications will
+	// be sent to the supplied channel.
 	Subscribe(req Request, nchan chan *Notification) (reply *RPCReply, err error)
+
+	// Close closes the session and releases any associated resources.
 	Close()
 }
 
@@ -33,37 +42,14 @@ type sesImpl struct {
 
 	pool []chan *RPCReply
 
+	hellochan chan *HelloMessage
 	responseq []chan *RPCReply
-
-	subchan chan *Notification
+	subchan   chan *Notification
 
 	hello   *HelloMessage
 	reqLock sync.Mutex
 	pchLock sync.Mutex
 	rchLock sync.Mutex
-}
-
-type decoder struct {
-	*xml.Decoder
-	ncDecoder *rfc6242.Decoder
-}
-
-type encoder struct {
-	xmlEncoder *xml.Encoder
-	ncEncoder  *rfc6242.Encoder
-}
-
-func (e *encoder) encode(msg interface{}) error {
-
-	err := e.xmlEncoder.Encode(msg)
-	if err != nil {
-		return err
-	}
-	err = e.ncEncoder.EndOfMessage()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // DefaultCapabilities sets the default capabilities of the client library
@@ -87,12 +73,12 @@ func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, er
 	dec := newDecoder(t)
 	enc := newEncoder(t)
 
-	sess := &sesImpl{t: t, dec: dec, enc: enc, evtlog: evtlog, nclog: nclog}
+	sess := &sesImpl{t: t, dec: dec, enc: enc, evtlog: evtlog, nclog: nclog, hellochan: make(chan *HelloMessage)}
 
-	hch := make(chan *HelloMessage)
-	go sess.handleInput(hch)
+	go sess.handleInput()
 
-	sess.hello = <-hch
+	sess.hello = <-sess.hellochan
+
 	helloresp := &HelloMessage{Capabilities: DefaultCapabilities}
 	chunkedFraming := false
 	for _, capability := range sess.hello.Capabilities {
@@ -158,9 +144,9 @@ func (si *sesImpl) Close() {
 	}
 }
 
-func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
+func (si *sesImpl) handleInput() {
 
-	defer si.closeChannels(hch)
+	defer si.closeChannels()
 	for {
 		token, err := si.dec.Token()
 		if err != nil {
@@ -178,7 +164,7 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 					si.evtlog.Printf("DecodeElement() error: %v\n", err)
 					return
 				}
-				hch <- &hello
+				si.hellochan <- &hello
 			case nameRPCReply: // <rpc-reply>
 				reply := RPCReply{}
 				if err := si.dec.DecodeElement(&reply, &token); err != nil {
@@ -209,13 +195,12 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 	}
 }
 
-func (si *sesImpl) closeChannels(hch chan<- *HelloMessage) {
-	close(hch)
+func (si *sesImpl) closeChannels() {
+	close(si.hellochan)
 	if si.subchan != nil {
 		close(si.subchan)
 	}
 	si.closeAllResponseChannels()
-
 }
 
 func (si *sesImpl) allocChan() (ch chan *RPCReply) {
@@ -261,14 +246,4 @@ func (si *sesImpl) closeAllResponseChannels() {
 			return
 		}
 	}
-}
-
-func newDecoder(t Transport) *decoder {
-	ncDecoder := rfc6242.NewDecoder(t)
-	return &decoder{Decoder: xml.NewDecoder(ncDecoder), ncDecoder: ncDecoder}
-}
-
-func newEncoder(t Transport) *encoder {
-	ncEncoder := rfc6242.NewEncoder(t)
-	return &encoder{xmlEncoder: xml.NewEncoder(ncEncoder), ncEncoder: ncEncoder}
 }
