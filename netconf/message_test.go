@@ -9,12 +9,10 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	mocks "github.com/damianoneill/net/netconf/mocks"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ssh"
 )
 
 func TestNewSession(t *testing.T) {
@@ -48,7 +46,7 @@ func TestExecute(t *testing.T) {
 	expectToReadServerHello(mockt)
 	_ = expectToSendMessage(mockt)
 
-	expectToReplyToRequest(mockt)
+	expectToReplyToNRequests(mockt, 0)
 
 	ncs, err := NewSession(mockt, l, l)
 
@@ -67,7 +65,7 @@ func TestExecuteAsync(t *testing.T) {
 	expectToReadServerHello(mockt)
 	_ = expectToSendMessage(mockt)
 
-	expectToReplyToRequest(mockt)
+	expectToReplyToNRequests(mockt, 0)
 
 	ncs, _ := NewSession(mockt, l, l)
 
@@ -86,6 +84,37 @@ func TestExecuteAsync(t *testing.T) {
 	assert.Equal(t, `<data><test1/></data>`, reply.Data, "Reply should contain response data")
 }
 
+func TestSubscribe(t *testing.T) {
+
+	mockt := &mocks.Transport{}
+
+	l := log.New(os.Stderr, "logger:", log.Lshortfile)
+
+	expectToReadServerHello(mockt)
+	_ = expectToSendMessage(mockt)
+
+	expectToReplyToNRequests(mockt, 1)
+	expectToReadOneNotification(mockt, notificationMessage())
+
+	ncs, _ := NewSession(mockt, l, l)
+
+	nch := make(chan *Notification)
+	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
+
+	assert.NotNil(t, reply.Data, "create-subscription failed")
+
+	result := <-nch
+	assert.NotNil(t, result, "Expected notification")
+	assert.Equal(t, "netconf-session-start", result.XMLName.Local, "Unexpected event type")
+	assert.Equal(t, "urn:ietf:params:xml:ns:yang:ietf-netconf-notifications", result.XMLName.Space, "Unexpected event NS")
+	assert.Equal(t, "2018-10-10T09:23:07Z", result.EventTime, "Unexpected event time")
+	assert.Equal(t, notificationEvent(), result.Event, "Unexpected event XML")
+
+	result = <-nch
+	assert.Nil(t, result, "No more notifications expected")
+
+}
+
 func TestConcurrentExecute(t *testing.T) {
 
 	mockt := &mocks.Transport{}
@@ -95,7 +124,7 @@ func TestConcurrentExecute(t *testing.T) {
 	expectToReadServerHello(mockt)
 	_ = expectToSendMessage(mockt)
 
-	expectToReplyToRequest(mockt)
+	expectToReplyToNRequests(mockt, 0)
 
 	ncs, _ := NewSession(mockt, l, l)
 
@@ -125,7 +154,7 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 	expectToReadServerHello(mockt)
 	_ = expectToSendMessage(mockt)
 
-	expectToReplyToRequest(mockt)
+	expectToReplyToNRequests(mockt, 0)
 
 	ncs, _ := NewSession(mockt, l, l)
 
@@ -158,7 +187,7 @@ func BenchmarkExecute(b *testing.B) {
 	expectToReadServerHello(mockt)
 	_ = expectToSendMessage(mockt)
 
-	expectToReplyToRequest(mockt)
+	expectToReplyToNRequests(mockt, 0)
 
 	ncs, _ := NewSession(mockt, l, l)
 
@@ -176,7 +205,7 @@ func BenchmarkTemplateParallel(b *testing.B) {
 	expectToReadServerHello(mockt)
 	_ = expectToSendMessage(mockt)
 
-	expectToReplyToRequest(mockt)
+	expectToReplyToNRequests(mockt, 0)
 
 	ncs, _ := NewSession(mockt, l, l)
 
@@ -188,17 +217,24 @@ func BenchmarkTemplateParallel(b *testing.B) {
 }
 
 func expectToReplyToRequest(mockt *mocks.Transport) {
+	expectToReplyToNRequests(mockt, 1)
+}
+
+func expectToReplyToNRequests(mockt *mocks.Transport, n int) {
 	ch := make(chan string)
 
-	mockt.On("Read", mock.Anything).Return(func(buf []byte) int {
+	call := mockt.On("Read", mock.Anything).Return(func(buf []byte) int {
 		body := <-ch
 		i := rpcReply(body)
 		copy(buf, i)
 		return len(i)
 	}, nil)
+	if n > 0 {
+		call.Times(n)
+	}
 
 	var body string
-	mockt.On("Write", mock.Anything).Return(func(buf []byte) int {
+	call = mockt.On("Write", mock.Anything).Return(func(buf []byte) int {
 		if strings.Contains(string(buf), "]]>]]>") {
 			ch <- body
 		} else {
@@ -215,6 +251,15 @@ func expectToReadServerHello(mockt *mocks.Transport) {
 		copy(buf, i)
 		return len(i)
 	}, nil).Once()
+}
+
+func expectToReadOneNotification(mockt *mocks.Transport, n string) {
+	mockt.On("Read", mock.Anything).Return(func(buf []byte) int {
+		i := []byte(n)
+		copy(buf, i)
+		return len(i)
+	}, nil).Once()
+	mockt.On("Read", mock.Anything).Return(0, io.EOF)
 }
 
 func expectToSendMessage(mockt *mocks.Transport) *[]byte {
@@ -265,63 +310,88 @@ func rpcReply(body string) []byte {
 		`]]>]]>`)
 }
 
-// Simple real NE access test
-
-func TestRealNewSession(t *testing.T) {
-
-	sshConfig := &ssh.ClientConfig{
-		User:            "WRuser",
-		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
-	assert.NoError(t, err, "Not expecting new transport to fail")
-	defer tr.Close()
-
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-	ncs, err := NewSession(tr, l, l)
-	assert.NoError(t, err, "Not expecting new session to fail")
-	assert.NotNil(t, ncs, "Session should be non-nil")
-
-	var wg sync.WaitGroup
-	for n := 0; n < 1; n++ {
-		wg.Add(1)
-		go func(z int) {
-			defer wg.Done()
-			for c := 0; c < 1; c++ {
-				reply, err := ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
-				assert.NoError(t, err, "Not expecting exec to fail")
-				assert.NotNil(t, reply, "Reply should be non-nil")
-			}
-		}(n)
-	}
-	wg.Wait()
+func notificationMessage() string {
+	return `<notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">` +
+		`<eventTime>2018-10-10T09:23:07Z</eventTime>` +
+		notificationEvent() +
+		`</notification>` +
+		`]]>]]>`
 }
 
-func TestRealSubscription(t *testing.T) {
-
-	sshConfig := &ssh.ClientConfig{
-		User:            "WRuser",
-		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
-	assert.NoError(t, err, "Not expecting new transport to fail")
-	defer tr.Close()
-
-	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-	ncs, err := NewSession(tr, l, l)
-	assert.NoError(t, err, "Not expecting new session to fail")
-	assert.NotNil(t, ncs, "Session should be non-nil")
-
-	reply, err := ncs.Execute(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`))
-	assert.NoError(t, err, "Not expecting exec to fail")
-	assert.NotNil(t, reply, "Reply should be non-nil")
-
-	go NewSession(tr, l, l)
-	time.Sleep(time.Second * time.Duration(5))
-	assert.Nil(t, reply, "Force failure")
-
+func notificationEvent() string {
+	return `<netconf-session-start xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-notifications">` +
+		`<username>WRuser</username>` +
+		`<session-id>321</session-id>` +
+		`<source-host>172.26.136.66</source-host>` +
+		`</netconf-session-start>`
 }
+
+// Simple real NE access tests
+
+// func TestRealNewSession(t *testing.T) {
+
+// 	sshConfig := &ssh.ClientConfig{
+// 		User:            "WRuser",
+// 		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+// 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+// 	}
+
+// 	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+// 	assert.NoError(t, err, "Not expecting new transport to fail")
+// 	defer tr.Close()
+
+// 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
+// 	ncs, err := NewSession(tr, l, l)
+// 	assert.NoError(t, err, "Not expecting new session to fail")
+// 	assert.NotNil(t, ncs, "Session should be non-nil")
+
+// 	var wg sync.WaitGroup
+// 	for n := 0; n < 1; n++ {
+// 		wg.Add(1)
+// 		go func(z int) {
+// 			defer wg.Done()
+// 			for c := 0; c < 1; c++ {
+// 				reply, err := ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+// 				assert.NoError(t, err, "Not expecting exec to fail")
+// 				assert.NotNil(t, reply, "Reply should be non-nil")
+// 			}
+// 		}(n)
+// 	}
+// 	wg.Wait()
+// }
+
+// func TestRealSubscription(t *testing.T) {
+
+// 	sshConfig := &ssh.ClientConfig{
+// 		User:            "WRuser",
+// 		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+// 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+// 	}
+
+// 	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+// 	assert.NoError(t, err, "Not expecting new transport to fail")
+// 	defer tr.Close()
+
+// 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
+// 	ncs, err := NewSession(tr, l, l)
+// 	assert.NoError(t, err, "Not expecting new session to fail")
+// 	assert.NotNil(t, ncs, "Session should be non-nil")
+
+// 	nchan := make(chan *Notification)
+// 	reply, err := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nchan)
+// 	assert.NotNil(t, reply, "Reply should be non-nil")
+// 	assert.NoError(t, err, "Not expecting exec to fail")
+
+// 	time.AfterFunc(time.Second*2, func() {
+// 		tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+// 		assert.NoError(t, err, "Not expecting new transport to fail")
+// 		ns, _ := NewSession(tr, l, l)
+// 		ns.Close()
+// 	})
+
+// 	n := <-nchan
+
+// 	assert.NotNil(t, n, "Reply should be non-nil")
+// 	fmt.Printf("%v\n", n)
+
+// }

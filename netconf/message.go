@@ -51,11 +51,22 @@ type RPCError struct {
 	Info     string `xml:",innerxml"`
 }
 
+type Notification struct {
+	XMLName   xml.Name
+	EventTime string
+	Event     string `xml:",innerxml"`
+}
+type NotificationMessage struct {
+	XMLName   xml.Name     //`xml:"notification"`
+	EventTime string       `xml:"eventTime"`
+	Event     Notification `xml:",any"`
+}
+
 // Session represents a Netconf Session
 type Session interface {
 	Execute(req Request) (*RPCReply, error)
 	ExecuteAsync(req Request, rchan chan *RPCReply) (err error)
-	// Subscribe(req Request, nchan chan *Notification) (err error)
+	Subscribe(req Request, nchan chan *Notification) (reply *RPCReply, err error)
 	Close()
 }
 
@@ -69,10 +80,13 @@ type sesImpl struct {
 	pool []chan *RPCReply
 
 	responseq []chan *RPCReply
-	hello     *HelloMessage
-	reqLock   sync.Mutex
-	pchLock   sync.Mutex
-	rchLock   sync.Mutex
+
+	subchan chan *Notification
+
+	hello   *HelloMessage
+	reqLock sync.Mutex
+	pchLock sync.Mutex
+	rchLock sync.Mutex
 }
 
 type decoder struct {
@@ -168,7 +182,19 @@ func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
 	si.pushRespChan(rchan)
 
 	return si.enc.encode(msg)
+}
 
+func (si *sesImpl) Subscribe(req Request, nchan chan *Notification) (reply *RPCReply, err error) {
+	rchan := si.allocChan()
+	defer si.relChan(rchan)
+
+	err = si.ExecuteAsync(req, rchan)
+	if err != nil {
+		return
+	}
+	si.subchan = nchan
+	reply = <-rchan
+	return
 }
 
 func (si *sesImpl) Close() {
@@ -180,7 +206,7 @@ func (si *sesImpl) Close() {
 
 func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 
-	defer close(hch)
+	defer si.closeChannels(hch)
 	for {
 		token, err := si.dec.Token()
 		if err != nil {
@@ -212,20 +238,14 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 				}(respch, &reply)
 
 			case notification: // <notification>
-				type NotificationEvent struct {
-					XMLName xml.Name
-					Data    string `xml:",innerxml"`
-				}
-				type Notification struct {
-					XMLName   xml.Name          //`xml:"notification"`
-					EventTime string            `xml:"eventTime"`
-					Event     NotificationEvent `xml:",any"`
-				}
-				result := &Notification{}
+
+				result := &NotificationMessage{}
 				_ = si.dec.DecodeElement(result, &token)
 				n := fmt.Sprintf(`<%s xmlns="%s">%s</%s>`,
-					result.Event.XMLName.Local, result.Event.XMLName.Space, result.Event.Data, result.Event.XMLName.Local)
-				fmt.Printf("saw <notification> %s\n", n)
+					result.Event.XMLName.Local, result.Event.XMLName.Space, result.Event.Event, result.Event.XMLName.Local)
+				if si.subchan != nil {
+					si.subchan <- &Notification{XMLName: result.Event.XMLName, EventTime: result.EventTime, Event: n}
+				}
 
 			default:
 				fmt.Printf("Unexpected element:%v\n", token.Name)
@@ -233,6 +253,15 @@ func (si *sesImpl) handleInput(hch chan<- *HelloMessage) {
 			}
 		}
 	}
+}
+
+func (si *sesImpl) closeChannels(hch chan<- *HelloMessage) {
+	close(hch)
+	if si.subchan != nil {
+		close(si.subchan)
+	}
+	si.closeAllResponseChannels()
+
 }
 
 func (si *sesImpl) allocChan() (ch chan *RPCReply) {
@@ -264,8 +293,16 @@ func (si *sesImpl) pushRespChan(ch chan *RPCReply) {
 func (si *sesImpl) popRespChan() (ch chan *RPCReply) {
 	si.rchLock.Lock()
 	defer si.rchLock.Unlock()
-	si.responseq, ch = si.responseq[1:], si.responseq[0]
+	if len(si.responseq) > 0 {
+		si.responseq, ch = si.responseq[1:], si.responseq[0]
+	}
 	return
+}
+
+func (si *sesImpl) closeAllResponseChannels() {
+	for ch := si.popRespChan(); ch != nil; {
+		close(ch)
+	}
 }
 
 func newDecoder(t Transport) *decoder {
