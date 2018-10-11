@@ -62,12 +62,14 @@ var (
 	nameHello       = xml.Name{Space: netconfNS, Local: "hello"}
 	nameRPCReply    = xml.Name{Space: netconfNS, Local: "rpc-reply"}
 	notification    = xml.Name{Space: netconfNotifyNS, Local: "notification"}
-	CapBase10       = "urn:ietf:params:netconf:base:1.0"
-	CapBase11       = "urn:ietf:params:netconf:base:1.1"
+	// CapBase10 defines capability value identifying 1.0 support
+	CapBase10 = "urn:ietf:params:netconf:base:1.0"
+	// CapBase11 defines capability value identifying 1.1 support
+	CapBase11 = "urn:ietf:params:netconf:base:1.1"
 )
 
 // NewSession creates a new Netconf session, using the supplied Transport.
-func NewSession(t Transport, evtlog *log.Logger, nclog *log.Logger) (Session, error) {
+func NewSession(t Transport, evtlog, nclog *log.Logger) (Session, error) {
 
 	si := &sesImpl{t: t, dec: newDecoder(t), enc: newEncoder(t), evtlog: evtlog, nclog: nclog, hellochan: make(chan *HelloMessage)}
 
@@ -184,30 +186,29 @@ func (si *sesImpl) handleIncomingMessages() {
 			break
 		}
 
-		switch token := token.(type) {
-		case xml.StartElement:
-			switch token.Name {
-			case nameHello: // <hello>
-				if si.handleHello(token) != nil {
-					return
-				}
-
-			case nameRPCReply: // <rpc-reply>
-				if si.handleRPCReply(token) != nil {
-					return
-				}
-
-			case notification: // <notification>
-				if si.handleNotification(token) != nil {
-					return
-				}
-
-			default:
-				fmt.Printf("Unexpected element:%v\n", token.Name)
-				si.dec.Skip()
-			}
+		if err = si.handleToken(token); err != nil {
+			return
 		}
 	}
+}
+
+func (si *sesImpl) handleToken(token xml.Token) (err error) {
+	switch token := token.(type) {
+	case xml.StartElement:
+		switch token.Name {
+		case nameHello: // <hello>
+			err = si.handleHello(token)
+
+		case nameRPCReply: // <rpc-reply>
+			err = si.handleRPCReply(token)
+
+		case notification: // <notification>
+			err = si.handleNotification(token)
+
+		default:
+		}
+	}
+	return
 }
 
 func (si *sesImpl) handleHello(token xml.StartElement) (err error) {

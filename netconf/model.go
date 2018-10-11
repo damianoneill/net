@@ -16,12 +16,14 @@ type HelloMessage struct {
 	SessionID    int      `xml:"session-id,omitempty"`
 }
 
+// RPCMessage defines the an rpc request message
 type RPCMessage struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
 	MessageID string   `xml:"message-id,attr"`
 	Methods   []byte   `xml:",innerxml"`
 }
 
+// RPCReply defines the an rpc request message
 type RPCReply struct {
 	XMLName   xml.Name   `xml:"rpc-reply"`
 	Errors    []RPCError `xml:"rpc-error,omitempty"`
@@ -41,11 +43,14 @@ type RPCError struct {
 	Info     string `xml:",innerxml"`
 }
 
+// Notification defines a specific notification event.
 type Notification struct {
 	XMLName   xml.Name
 	EventTime string
 	Event     string `xml:",innerxml"`
 }
+
+// NotificationMessage defines the notification message sent from the server.
 type NotificationMessage struct {
 	XMLName   xml.Name     //`xml:"notification"`
 	EventTime string       `xml:"eventTime"`

@@ -60,7 +60,7 @@ func TestExecute(t *testing.T) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, err := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
@@ -224,14 +224,10 @@ func BenchmarkTemplateParallel(b *testing.B) {
 func extractRequestBody(buf []byte) string {
 	re := regexp.MustCompile("<get>(.*)</get>")
 	matches := re.FindStringSubmatch(string(buf))
-	if matches != nil && len(matches) > 0 {
+	if len(matches) > 0 {
 		return matches[1]
 	}
 	return ""
-}
-
-func serverHello() string {
-	return serverHelloWithBase(`urn:ietf:params:netconf:base:1.0`)
 }
 
 func serverHelloWithBase(base string) string {
@@ -346,8 +342,8 @@ func (ms *mockServer) replyToNRequests(count int) {
 
 func (ms *mockServer) ignoreRequest() {
 	wcount := 0
-	_ = ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		_ = <-ms.rwSynch
+	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
+		<-ms.rwSynch
 		return 0
 	}, io.EOF)
 
@@ -362,8 +358,8 @@ func (ms *mockServer) ignoreRequest() {
 
 func (ms *mockServer) longRunningRequest() {
 	wcount := 0
-	_ = ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		_ = <-ms.rwSynch
+	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
+		<-ms.rwSynch
 		return 0
 	}, io.EOF)
 

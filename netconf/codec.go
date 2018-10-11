@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"encoding/xml"
+	"io"
 
 	"github.com/damianoneill/net/netconf/rfc6242"
 )
@@ -25,19 +26,15 @@ func (e *encoder) encode(msg interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = e.ncEncoder.EndOfMessage()
-	if err != nil {
-		return err
-	}
-	return nil
+	return e.ncEncoder.EndOfMessage()
 }
 
-func newDecoder(t Transport) *decoder {
+func newDecoder(t io.Reader) *decoder {
 	ncDecoder := rfc6242.NewDecoder(t)
 	return &decoder{Decoder: xml.NewDecoder(ncDecoder), ncDecoder: ncDecoder}
 }
 
-func newEncoder(t Transport) *encoder {
+func newEncoder(t io.Writer) *encoder {
 	ncEncoder := rfc6242.NewEncoder(t)
 	return &encoder{xmlEncoder: xml.NewEncoder(ncEncoder), ncEncoder: ncEncoder}
 }
