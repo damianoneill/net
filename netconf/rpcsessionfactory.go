@@ -13,8 +13,8 @@ var (
 	defaultLogger = log.New(os.Stderr, "logger:", log.Lshortfile)
 )
 
-// NewRpcSession connects to the  target using the client configuration, and establishes
-// a netconf session.
+// NewRpcSession connects to the  target using the ssh configuration, and establishes
+// a netconf session with default configuration.
 func NewRpcSession(sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
 
 	return NewRpcSessionWithConfig(sshcfg, target, defaultConfig)
