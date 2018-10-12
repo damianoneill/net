@@ -34,6 +34,7 @@ func TestNewSession(t *testing.T) {
 
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
+	assert.Equal(t, 4, ncs.ID(), "Session id not defined correctly")
 	assert.NotNil(t, ms.clientHello, "Should have received hello")
 	assert.Equal(t, ms.clientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
 

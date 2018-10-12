@@ -31,6 +31,9 @@ type Session interface {
 
 	// Close closes the session and releases any associated resources.
 	Close()
+
+	// ID delivers the server-allocated id of the session.
+	ID() int
 }
 
 type sesImpl struct {
@@ -139,6 +142,10 @@ func (si *sesImpl) Close() {
 	if err != nil {
 		si.evtlog.Printf("Session close failed %v\n", err)
 	}
+}
+
+func (si *sesImpl) ID() int {
+	return si.hello.SessionID
 }
 
 func (si *sesImpl) exchangeHelloMessages() (err error) {

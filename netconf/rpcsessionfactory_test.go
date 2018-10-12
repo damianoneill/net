@@ -13,7 +13,7 @@ import (
 
 func TestTransportFailure(t *testing.T) {
 
-	s, err := NewRpcSession(&ssh.ClientConfig{}, "localhost:0")
+	s, err := NewRPCSession(&ssh.ClientConfig{}, "localhost:0")
 	assert.Error(t, err, "Expecting new session to fail")
 	assert.Nil(t, s, "Session should be nil")
 }
@@ -29,7 +29,7 @@ func TestSessionSetupFailure(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	s, err := NewRpcSessionWithConfig(sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	s, err := NewRPCSessionWithConfig(sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
 	assert.Error(t, err, "Expecting new session to fail")
 	assert.Nil(t, s, "Session should be nil")
 }

@@ -13,16 +13,16 @@ var (
 	defaultLogger = log.New(os.Stderr, "logger:", log.Lshortfile)
 )
 
-// NewRpcSession connects to the  target using the ssh configuration, and establishes
+// NewRPCSession connects to the  target using the ssh configuration, and establishes
 // a netconf session with default configuration.
-func NewRpcSession(sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
+func NewRPCSession(sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
 
-	return NewRpcSessionWithConfig(sshcfg, target, defaultConfig)
+	return NewRPCSessionWithConfig(sshcfg, target, defaultConfig)
 }
 
-// NewRpcSession connects to the  target using the ssh configuration, and establishes
+// NewRPCSessionWithConfig connects to the  target using the ssh configuration, and establishes
 // a netconf session with the client configuration.
-func NewRpcSessionWithConfig(sshcfg *ssh.ClientConfig, target string, cfg *ClientConfig) (s Session, err error) {
+func NewRPCSessionWithConfig(sshcfg *ssh.ClientConfig, target string, cfg *ClientConfig) (s Session, err error) {
 
 	var t Transport
 	if t, err = createTransport(sshcfg, target); err != nil {
