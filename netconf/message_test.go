@@ -30,7 +30,7 @@ func TestNewSession(t *testing.T) {
 	ms := newMockServer()
 	ms.closeConnection()
 
-	ncs, err := NewSession(ms.transport, testLogger, testLogger)
+	ncs, err := testSession(ms)
 
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
@@ -45,7 +45,7 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 	ms := newMockServerWithBase(CapBase11)
 	ms.closeConnection()
 
-	ncs, err := NewSession(ms.transport, testLogger, testLogger)
+	ncs, err := testSession(ms)
 
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
@@ -60,7 +60,7 @@ func TestExecute(t *testing.T) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
@@ -73,7 +73,7 @@ func TestExecuteAsync(t *testing.T) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	rch1 := make(chan *RPCReply)
 	rch2 := make(chan *RPCReply)
@@ -95,7 +95,7 @@ func TestExecuteAsyncUnfulfilled(t *testing.T) {
 	ms := newMockServer()
 	ms.ignoreRequest()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	rch1 := make(chan *RPCReply)
 	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
@@ -109,7 +109,7 @@ func TestExecuteAsyncInterrupted(t *testing.T) {
 	ms := newMockServer()
 	ms.longRunningRequest()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	rch1 := make(chan *RPCReply)
 	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
@@ -126,7 +126,7 @@ func TestSubscribe(t *testing.T) {
 	ms.sendMessage(notificationMessage())
 	ms.closeConnection()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	nch := make(chan *Notification)
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
@@ -149,7 +149,7 @@ func TestConcurrentExecute(t *testing.T) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	var wg sync.WaitGroup
 	for r := 0; r < 10; r++ {
@@ -173,7 +173,7 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	var wg sync.WaitGroup
 	for r := 0; r < 10; r++ {
@@ -200,7 +200,7 @@ func BenchmarkExecute(b *testing.B) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	for n := 0; n < b.N; n++ {
 		ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
@@ -212,7 +212,7 @@ func BenchmarkTemplateParallel(b *testing.B) {
 	ms := newMockServer()
 	ms.replyToRequests()
 
-	ncs, _ := NewSession(ms.transport, testLogger, testLogger)
+	ncs, _ := testSession(ms)
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -376,6 +376,10 @@ func (ms *mockServer) closeConnection() {
 	ms.transport.On("Read", mock.Anything).Return(0, io.EOF)
 }
 
+func testSession(ms *mockServer) (Session, error) {
+	return NewSession(ms.transport, testLogger, testLogger, defaultConfig)
+}
+
 // Simple real NE access tests
 
 // func TestRealNewSession(t *testing.T) {
@@ -391,7 +395,7 @@ func (ms *mockServer) closeConnection() {
 // 	defer tr.Close()
 
 // 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-// 	ncs, err := NewSession(tr, l, l)
+// 	ncs, err := NewSession(tr, l, l, defaultConfig)
 // 	assert.NoError(t, err, "Not expecting new session to fail")
 // 	assert.NotNil(t, ncs, "Session should be non-nil")
 
@@ -423,7 +427,7 @@ func (ms *mockServer) closeConnection() {
 // 	defer tr.Close()
 
 // 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-// 	ncs, err := NewSession(tr, l, l)
+// 	ncs, err := NewSession(tr, l, l, defaultConfig)
 // 	assert.NoError(t, err, "Not expecting new session to fail")
 // 	assert.NotNil(t, ncs, "Session should be non-nil")
 

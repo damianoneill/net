@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/satori/go.uuid"
 
@@ -33,6 +34,7 @@ type Session interface {
 }
 
 type sesImpl struct {
+	cfg    *ClientConfig
 	t      Transport
 	dec    *decoder
 	enc    *encoder
@@ -69,9 +71,16 @@ var (
 )
 
 // NewSession creates a new Netconf session, using the supplied Transport.
-func NewSession(t Transport, evtlog, nclog *log.Logger) (Session, error) {
+func NewSession(t Transport, evtlog, nclog *log.Logger, cfg *ClientConfig) (Session, error) {
 
-	si := &sesImpl{t: t, dec: newDecoder(t), enc: newEncoder(t), evtlog: evtlog, nclog: nclog, hellochan: make(chan *HelloMessage)}
+	si := &sesImpl{
+		cfg:       cfg,
+		t:         t,
+		dec:       newDecoder(t),
+		enc:       newEncoder(t),
+		evtlog:    evtlog,
+		nclog:     nclog,
+		hellochan: make(chan *HelloMessage)}
 
 	// Launch goroutine to handle incoming messages from the server.
 	go si.handleIncomingMessages()
@@ -135,7 +144,11 @@ func (si *sesImpl) Close() {
 func (si *sesImpl) exchangeHelloMessages() (err error) {
 
 	// Wait for the input handler to send the server hello.
-	si.hello = <-si.hellochan
+	select {
+	case si.hello = <-si.hellochan:
+	case <-time.After(time.Duration(si.cfg.setupTimeoutSecs) * time.Second):
+	}
+
 	if si.hello == nil {
 		return errors.New("Failed to get Hello from server")
 	}

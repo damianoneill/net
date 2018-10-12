@@ -48,6 +48,9 @@ func NewDecoder(input io.Reader, options ...DecoderOption) *Decoder {
 		Input:   input,
 		framer:  decoderEndOfMessage,
 		bufSize: defaultReaderBufferSize,
+		// SJ added this setting of eofOK to true, to avoid 'unexpected EOF' failure (vs. standard EOF) being
+		// reported when stream is closed before any data is received.
+		eofOK: true,
 	}
 	for _, option := range options {
 		option(d)
