@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"encoding/xml"
+	"fmt"
 )
 
 // Defines structs representing netconf messages and notifications.
@@ -41,6 +42,11 @@ type RPCError struct {
 	Path     string `xml:"error-path"`
 	Message  string `xml:"error-message"`
 	Info     string `xml:",innerxml"`
+}
+
+// Error generates a string representation of the RPC error
+func (re *RPCError) Error() string {
+	return fmt.Sprintf("netconf rpc [%s] '%s'", re.Severity, re.Message)
 }
 
 // Notification defines a specific notification event.

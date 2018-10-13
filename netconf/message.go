@@ -110,10 +110,8 @@ func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
 
 	// Wait for the response.
 	reply := <-rchan
-	if reply == nil {
-		err = io.ErrUnexpectedEOF
-	}
-	return reply, err
+
+	return reply, mapError(reply)
 }
 
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
@@ -336,6 +334,21 @@ func (si *sesImpl) popRespChan() (ch chan *RPCReply) {
 	defer si.rchLock.Unlock()
 	if len(si.responseq) > 0 {
 		si.responseq, ch = si.responseq[1:], si.responseq[0]
+	}
+	return
+}
+
+// Map an RPC reply to an error, if the reply is either null or contains any RPC error.
+func mapError(r *RPCReply) (err error) {
+	if r == nil {
+		err = io.ErrUnexpectedEOF
+	} else if r.Errors != nil {
+		for _, rpcErr := range r.Errors {
+			if rpcErr.Severity == "error" {
+				err = &rpcErr
+				break
+			}
+		}
 	}
 	return
 }
