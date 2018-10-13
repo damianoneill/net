@@ -406,7 +406,7 @@ func testSession(ms *mockServer) (Session, error) {
 // 		go func(z int) {
 // 			defer wg.Done()
 // 			for c := 0; c < 1; c++ {
-// 				reply, err := ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+// 				reply, err := ncs.Execute(Request(`<get/>`))
 // 				assert.NoError(t, err, "Not expecting exec to fail")
 // 				assert.NotNil(t, reply, "Reply should be non-nil")
 // 			}

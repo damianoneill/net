@@ -31,6 +31,7 @@ type Decoder struct {
 	s          *bufio.Scanner
 	pr         *io.PipeReader
 	pw         *io.PipeWriter
+	piped      int
 	afterFirst func()
 
 	scanErr       error
@@ -68,18 +69,23 @@ func NewDecoder(input io.Reader, options ...DecoderOption) *Decoder {
 // Read reads from the Decoder's input and copies the data into b,
 // implementing io.Reader.
 func (d *Decoder) Read(b []byte) (n int, err error) {
-	if d.s.Scan() {
+	if d.piped > 0 {
+		n, err = d.pr.Read(b)
+		d.piped -= n
+	} else if d.s.Scan() {
 		token := d.s.Bytes()
 		if len(token) <= len(b) {
 			copy(b, token)
 			return len(token), nil
 		}
+		d.piped = len(token)
 		go func() {
 			if _, err := d.pw.Write(token); err != nil {
 				d.pr.CloseWithError(err)
 			}
 		}()
 		n, err = d.pr.Read(b)
+		d.piped -= n
 	} else if err = d.s.Err(); err == nil {
 		if d.eofOK {
 			err = io.EOF
@@ -97,8 +103,6 @@ func (d *Decoder) WriteTo(w io.Writer) (n int64, err error) {
 	for err == nil && d.s.Scan() {
 		b := d.s.Bytes()
 		_, err = w.Write(b)
-		// ws := string(b)
-		// fmt.Printf("Writing:%s\n", ws)
 		n += int64(len(b))
 	}
 	if err = d.s.Err(); err == nil && !d.eofOK {
