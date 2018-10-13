@@ -110,7 +110,10 @@ func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
 
 	// Wait for the response.
 	reply := <-rchan
-	return reply, nil
+	if reply == nil {
+		err = io.ErrUnexpectedEOF
+	}
+	return reply, err
 }
 
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
@@ -200,9 +203,6 @@ func (si *sesImpl) handleIncomingMessages() {
 	for {
 		token, err := si.dec.Token()
 		if err != nil {
-			if err != io.EOF {
-				si.evtlog.Printf("Token() error: %v\n", err)
-			}
 			break
 		}
 
