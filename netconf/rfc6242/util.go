@@ -1,6 +1,3 @@
-// Copyright (c) 2018 Andrew Fort
-//
-
 package rfc6242
 
 // SetChunkedFraming enables chunked framing mode on any non-nil

@@ -51,7 +51,7 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
 	assert.NotNil(t, ms.clientHello, "Should have received hello")
-	assert.Equal(t, ms.clientHello.Capabilities, []string{CapBase11}, "Did not send expected server capabilities")
+	assert.Contains(t, ms.clientHello.Capabilities, CapBase11, "Did not send expected server capabilities")
 
 	ncs.Close()
 }
@@ -130,11 +130,19 @@ func TestSubscribe(t *testing.T) {
 	ncs, _ := testSession(ms)
 
 	nch := make(chan *Notification)
+
+	// Capture notification that we expect.
+	var result *Notification
+	go func() {
+		result = <-nch
+	}()
+
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
 
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
-	result := <-nch
+	// Wait for notification.
+	time.Sleep(time.Millisecond * 200)
 	assert.NotNil(t, result, "Expected notification")
 	assert.Equal(t, "netconf-session-start", result.XMLName.Local, "Unexpected event type")
 	assert.Equal(t, "urn:ietf:params:xml:ns:yang:ietf-netconf-notifications", result.XMLName.Space, "Unexpected event NS")
@@ -268,7 +276,7 @@ func notificationMessage() string {
 
 func notificationEvent() string {
 	return `<netconf-session-start xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-notifications">` +
-		`<username>WRuser</username>` +
+		`<username>XXxxxx</username>` +
 		`<session-id>321</session-id>` +
 		`<source-host>172.26.136.66</source-host>` +
 		`</netconf-session-start>`
@@ -386,8 +394,8 @@ func testSession(ms *mockServer) (Session, error) {
 // func TestRealNewSession(t *testing.T) {
 
 // 	sshConfig := &ssh.ClientConfig{
-// 		User:            "WRuser",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+// 		User:            "XXxxxx",
+// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 // 	}
 
@@ -418,8 +426,8 @@ func testSession(ms *mockServer) (Session, error) {
 // func TestRealSubscription(t *testing.T) {
 
 // 	sshConfig := &ssh.ClientConfig{
-// 		User:            "WRuser",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+// 		User:            "XXxxxx",
+// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 // 	}
 
