@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-// The Operations layer defines a set of base protocol operations
+// The Message layer defines a set of base protocol operations
 // invoked as RPC methods with XML-encoded parameters.
 
 // Session represents a Netconf Session
@@ -30,6 +30,10 @@ type Session interface {
 	Subscribe(req Request, nchan chan *Notification) (reply *RPCReply, err error)
 
 	// Close closes the session and releases any associated resources.
+	// The channel will be automatically closed if the underlying network connection is closed, for
+	// example if the remote server discoonects.
+	// When the session is closed, any outstanding execute requests and reads from a notification
+	// channel will return nil.
 	Close()
 
 	// ID delivers the server-allocated id of the session.
@@ -59,14 +63,19 @@ type sesImpl struct {
 // DefaultCapabilities sets the default capabilities of the client library
 var DefaultCapabilities = []string{
 	CapBase10,
+	CapBase11,
 }
 
 var (
+	nameHello    = xml.Name{Space: netconfNS, Local: "hello"}
+	nameRPCReply = xml.Name{Space: netconfNS, Local: "rpc-reply"}
+	notification = xml.Name{Space: netconfNotifyNS, Local: "notification"}
+)
+
+const (
 	netconfNS       = "urn:ietf:params:xml:ns:netconf:base:1.0"
 	netconfNotifyNS = "urn:ietf:params:xml:ns:netconf:notification:1.0"
-	nameHello       = xml.Name{Space: netconfNS, Local: "hello"}
-	nameRPCReply    = xml.Name{Space: netconfNS, Local: "rpc-reply"}
-	notification    = xml.Name{Space: netconfNotifyNS, Local: "notification"}
+
 	// CapBase10 defines capability value identifying 1.0 support
 	CapBase10 = "urn:ietf:params:netconf:base:1.0"
 	// CapBase11 defines capability value identifying 1.1 support
@@ -151,6 +160,11 @@ func (si *sesImpl) ID() int {
 
 func (si *sesImpl) exchangeHelloMessages() (err error) {
 
+	err = si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
+	if err != nil {
+		return
+	}
+
 	// Wait for the input handler to send the server hello.
 	select {
 	case si.hello = <-si.hellochan:
@@ -161,21 +175,8 @@ func (si *sesImpl) exchangeHelloMessages() (err error) {
 		return errors.New("Failed to get Hello from server")
 	}
 
-	// Set client capabilities, depending on whether server supports chunked framing.
-	helloresp := &HelloMessage{Capabilities: DefaultCapabilities}
-	chunkedFraming := serverSupportsChunkedFraming(si.hello)
-	if chunkedFraming {
-		helloresp.Capabilities = []string{CapBase11}
-	}
-
-	// Send client capabilities to server.
-	err = si.enc.encode(helloresp)
-	if err != nil {
-		return
-	}
-
-	// Update the codec to use chunked framing from now.
-	if chunkedFraming {
+	if serverSupportsChunkedFraming(si.hello) {
+		// Update the codec to use chunked framing from now.
 		enableChunkedFraming(si.dec, si.enc)
 	}
 
@@ -343,7 +344,8 @@ func mapError(r *RPCReply) (err error) {
 	if r == nil {
 		err = io.ErrUnexpectedEOF
 	} else if r.Errors != nil {
-		for _, rpcErr := range r.Errors {
+		for i := 0; i < len(r.Errors); i++ {
+			rpcErr := r.Errors[i]
 			if rpcErr.Severity == "error" {
 				err = &rpcErr
 				break

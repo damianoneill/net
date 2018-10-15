@@ -39,8 +39,8 @@ func TestSessionSetupFailure(t *testing.T) {
 // func TestRealNewSession(t *testing.T) {
 
 // 	sshConfig := &ssh.ClientConfig{
-// 		User:            "WRuser",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("WRuser123")},
+// 		User:            "XXxxxx",
+// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 // 	}
 

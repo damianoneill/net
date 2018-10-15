@@ -1,7 +1,7 @@
 <notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">
   <eventTime>2018-10-10T09:23:07Z</eventTime>
   <netconf-session-start xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-notifications">
-    <username>WRuser</username>
+    <username>XXxxxx</username>
     <session-id>321</session-id>
     <source-host>172.26.136.66</source-host>
   </netconf-session-start>
