@@ -30,7 +30,7 @@ func TestSessionSetupFailure(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	s, err := NewRPCSessionWithConfig(WithClientTrace(context.Background(), DefaultLoggingHooks), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
 	assert.Error(t, err, "Expecting new session to fail")
 	assert.Nil(t, s, "Session should be nil")
 }
@@ -45,7 +45,7 @@ func TestSessionSetupFailure(t *testing.T) {
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 // 	}
 
-// 	s, err := NewRpcSession(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830))
+// 	s, err := NewRPCSession(WithClientTrace(context.Background(), DefaultLoggingHooks), sshConfig, fmt.Sprintf("172.26.138.57:%d", 830))
 // 	assert.NoError(t, err, "Not expecting new session to fail")
 // 	assert.NotNil(t, s, "Session should be non-nil")
 

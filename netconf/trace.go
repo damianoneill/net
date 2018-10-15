@@ -2,6 +2,7 @@ package netconf
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"time"
 
@@ -94,4 +95,28 @@ func (t *ClientTrace) compose(old *ClientTrace) {
 		})
 		tv.Field(i).Set(newFunc)
 	}
+}
+
+var DefaultLoggingHooks = &ClientTrace{
+	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
+		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
+	},
+	ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
+		log.Printf("ConnectDone target:%s config:%v err:%v took:%d\n", target, clientConfig, err, d)
+	},
+	ConnectionClosed: func(err error) {
+		log.Printf("ConnectionClosed err:%v\n", err)
+	},
+	ReadStart: func(p []byte) {
+		log.Printf("ReadStart capacity:%d\n", len(p))
+	},
+	ReadDone: func(p []byte, c int, err error, d time.Duration) {
+		log.Printf("ReadDone len:%d err:%v took:%d\n", c, err, d)
+	},
+	WriteStart: func(p []byte) {
+		log.Printf("WriteStart len:%d\n", len(p))
+	},
+	WriteDone: func(p []byte, c int, err error, d time.Duration) {
+		log.Printf("WriteDone len:%d err:%v took:%d\n", c, err, d)
+	},
 }
