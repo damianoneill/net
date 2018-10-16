@@ -1,40 +1,35 @@
 package netconf
 
 import (
-	"log"
-	"os"
+	"context"
 
 	"golang.org/x/crypto/ssh"
 )
 
 // Defines a factory method for instantiating netconf rpc sessions.
 
-var (
-	defaultLogger = log.New(os.Stderr, "logger:", log.Lshortfile)
-)
-
 // NewRPCSession connects to the  target using the ssh configuration, and establishes
 // a netconf session with default configuration.
-func NewRPCSession(sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
+func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
 
-	return NewRPCSessionWithConfig(sshcfg, target, defaultConfig)
+	return NewRPCSessionWithConfig(ctx, sshcfg, target, defaultConfig)
 }
 
 // NewRPCSessionWithConfig connects to the  target using the ssh configuration, and establishes
 // a netconf session with the client configuration.
-func NewRPCSessionWithConfig(sshcfg *ssh.ClientConfig, target string, cfg *ClientConfig) (s Session, err error) {
+func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target string, cfg *ClientConfig) (s Session, err error) {
 
 	var t Transport
-	if t, err = createTransport(sshcfg, target); err != nil {
+	if t, err = createTransport(ctx, sshcfg, target); err != nil {
 		return
 	}
 
-	if s, err = NewSession(t, defaultLogger, defaultLogger, cfg); err != nil {
+	if s, err = NewSession(ctx, t, cfg); err != nil {
 		t.Close() // nolint: gosec,errcheck
 	}
 	return
 }
 
-func createTransport(clientConfig *ssh.ClientConfig, target string) (t Transport, err error) {
-	return NewSSHTransport(clientConfig, target, "netconf")
+func createTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target string) (t Transport, err error) {
+	return NewSSHTransport(ctx, clientConfig, target, "netconf")
 }
