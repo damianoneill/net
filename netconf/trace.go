@@ -62,8 +62,17 @@ type ClientTrace struct {
 	// Error is called after an error condition has been detected.
 	Error func(context string, err error)
 
+	// NotificationReceived is called when a notification has been received.
+	NotificationReceived func(m *Notification)
+
 	// NotificationDropped is called when a notification is dropped because the reader is not ready.
 	NotificationDropped func(m *Notification)
+
+	// ExecuteStart is called before the execution of an rpc request.
+	ExecuteStart func(req Request, async bool)
+
+	// ExecuteDone is called after the execution of an rpc request
+	ExecuteDone func(req Request, async bool, res *RPCReply, err error, d time.Duration)
 }
 
 // compose modifies t such that it respects the previously-registered hooks in old,
@@ -129,7 +138,16 @@ var DefaultLoggingHooks = &ClientTrace{
 	Error: func(context string, err error) {
 		log.Printf("Error context:%s err:%v\n", context, err)
 	},
+	NotificationReceived: func(n *Notification) {
+		log.Printf("NotificationReceived %s\n", n.XMLName.Local)
+	},
 	NotificationDropped: func(n *Notification) {
 		log.Printf("NotificationDropped %s\n", n.XMLName.Local)
+	},
+	ExecuteStart: func(req Request, async bool) {
+		log.Printf("ExecuteStart async:%v req:%s\n", async, req)
+	},
+	ExecuteDone: func(req Request, async bool, res *RPCReply, err error, d time.Duration) {
+		log.Printf("ExecuteDone async:%v req:%s err:%v took:%dns\n", async, req, err, d)
 	},
 }

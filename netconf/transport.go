@@ -177,7 +177,6 @@ func (tw *traceWriter) Write(p []byte) (c int, err error) {
 		defer func(begin time.Time) {
 			tw.trace.WriteDone(p, c, err, time.Since(begin))
 		}(time.Now())
-
 	}
 	c, err = tw.w.Write(p)
 

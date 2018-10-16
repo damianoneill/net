@@ -395,17 +395,17 @@ func testSession(ms *mockServer) (Session, error) {
 // func TestRealNewSession(t *testing.T) {
 
 // 	sshConfig := &ssh.ClientConfig{
-// 		User:            "XXxxxx",
+// 		User:            "XXxxx",
 // 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 // 	}
 
-// 	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+// 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
+// 	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
 // 	assert.NoError(t, err, "Not expecting new transport to fail")
 // 	defer tr.Close()
 
-// 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-// 	ncs, err := NewSession(tr, l, l, defaultConfig)
+// 	ncs, err := NewSession(ctx, tr, defaultConfig)
 // 	assert.NoError(t, err, "Not expecting new session to fail")
 // 	assert.NotNil(t, ncs, "Session should be non-nil")
 
@@ -428,16 +428,17 @@ func testSession(ms *mockServer) (Session, error) {
 
 // 	sshConfig := &ssh.ClientConfig{
 // 		User:            "XXxxxx",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
+// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 // 	}
 
-// 	tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+// 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
+
+// 	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
 // 	assert.NoError(t, err, "Not expecting new transport to fail")
 // 	defer tr.Close()
 
-// 	l := log.New(os.Stderr, "logger:", log.Lshortfile)
-// 	ncs, err := NewSession(tr, l, l, defaultConfig)
+// 	ncs, err := NewSession(ctx, tr, defaultConfig)
 // 	assert.NoError(t, err, "Not expecting new session to fail")
 // 	assert.NotNil(t, ncs, "Session should be non-nil")
 
@@ -447,9 +448,9 @@ func testSession(ms *mockServer) (Session, error) {
 // 	assert.NoError(t, err, "Not expecting exec to fail")
 
 // 	time.AfterFunc(time.Second*2, func() {
-// 		tr, err := NewSSHTransport(sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+// 		tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
 // 		assert.NoError(t, err, "Not expecting new transport to fail")
-// 		ns, _ := NewSession(tr, l, l)
+// 		ns, _ := NewSession(ctx, tr, defaultConfig)
 // 		ns.Close()
 // 	})
 
@@ -457,5 +458,4 @@ func testSession(ms *mockServer) (Session, error) {
 
 // 	assert.NotNil(t, n, "Reply should be non-nil")
 // 	fmt.Printf("%v\n", n)
-
 // }

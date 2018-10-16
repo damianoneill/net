@@ -104,25 +104,51 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 	return si, nil
 }
 
-func (si *sesImpl) Execute(req Request) (*RPCReply, error) {
+func (si *sesImpl) Execute(req Request) (reply *RPCReply, err error) {
+
+	if si.trace != nil {
+		if si.trace.ExecuteStart != nil {
+			si.trace.ExecuteStart(req, false)
+		}
+		if si.trace.ExecuteDone != nil {
+			defer func(begin time.Time) {
+				si.trace.ExecuteDone(req, false, reply, err, time.Since(begin))
+			}(time.Now())
+		}
+	}
 
 	// Allocate a response channel
 	rchan := si.allocChan()
 	defer si.relChan(rchan)
 
 	// Submit the request
-	err := si.ExecuteAsync(req, rchan)
+	err = si.execute(req, rchan)
 	if err != nil {
 		return nil, err
 	}
 
 	// Wait for the response.
-	reply := <-rchan
+	reply = <-rchan
 
-	return reply, mapError(reply)
+	err = mapError(reply)
+	return reply, err
 }
 
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
+	if si.trace != nil {
+		if si.trace.ExecuteStart != nil {
+			si.trace.ExecuteStart(req, true)
+		}
+		if si.trace.ExecuteDone != nil {
+			defer func(begin time.Time) {
+				si.trace.ExecuteDone(req, true, nil, err, time.Since(begin))
+			}(time.Now())
+		}
+	}
+	return si.execute(req, rchan)
+}
+
+func (si *sesImpl) execute(req Request, rchan chan *RPCReply) (err error) {
 
 	// Build the request to be submitted.
 	msg := &RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
@@ -171,7 +197,11 @@ func (si *sesImpl) exchangeHelloMessages() (err error) {
 	}
 
 	if si.hello == nil {
-		return errors.New("Failed to get Hello from server")
+		err = errors.New("Failed to get Hello from server")
+		if si.trace != nil && si.trace.Error != nil {
+			si.trace.Error("NewSession", err)
+		}
+		return
 	}
 
 	if serverSupportsChunkedFraming(si.hello) {
@@ -262,6 +292,9 @@ func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
 	// Send notification to subscription channel, if it's defined and not full.
 	if si.subchan != nil {
 		notification := buildNotification(result)
+		if si.trace != nil && si.trace.NotificationReceived != nil {
+			si.trace.NotificationReceived(notification)
+		}
 		select {
 		case si.subchan <- notification:
 		default:
