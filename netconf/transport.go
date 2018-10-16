@@ -28,6 +28,7 @@ type tImpl struct {
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
 // and requesting the specified subsystem.
+// nolint : gosec
 func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
 
 	var impl tImpl

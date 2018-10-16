@@ -1,0 +1,22 @@
+# This is a weird way of telling Travis to use the fast container-based test
+# runner instead of the slow VM-based runner.
+sudo: false
+
+language: go
+
+go:
+- 1.11.x
+
+# Only clone the most recent commit.
+git:
+  depth: 1
+
+before_script:
+- go get -u github.com/mattn/goveralls
+- go get -u github.com/alecthomas/gometalinter
+- gometalinter --install
+
+script:
+- gometalinter --vendor --deadline=120s ./...
+- go test -v -timeout 8s -race ./... -coverprofile=coverage.out # Run all the tests with the race detector enabled
+- goveralls -coverprofile=coverage.out -service travis-ci

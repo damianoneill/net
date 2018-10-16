@@ -79,6 +79,7 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 }
 
 // decoderChunked is the NETCONF 1.1 chunked framing decoder function.
+// nolint : gocyclo
 func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	if d.scanErr != nil {
 		err = d.scanErr
@@ -154,6 +155,7 @@ const (
 	chActionChunk
 )
 
+// nolint : gocyclo
 func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksize uint64, err error) {
 	// special case short blocks to detect specific errors. we will
 	// never be called with an empty b.
