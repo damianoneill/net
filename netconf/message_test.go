@@ -1,6 +1,7 @@
 package netconf
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -386,7 +387,7 @@ func (ms *mockServer) closeConnection() {
 }
 
 func testSession(ms *mockServer) (Session, error) {
-	return NewSession(ms.transport, testLogger, testLogger, defaultConfig)
+	return NewSession(context.Background(), ms.transport, defaultConfig)
 }
 
 // Simple real NE access tests

@@ -1,6 +1,7 @@
 package netconf
 
 import (
+	"context"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"github.com/satori/go.uuid"
 
 	"io"
-	"log"
 	"sync"
 )
 
@@ -41,12 +41,11 @@ type Session interface {
 }
 
 type sesImpl struct {
-	cfg    *ClientConfig
-	t      Transport
-	dec    *decoder
-	enc    *encoder
-	nclog  *log.Logger
-	evtlog *log.Logger
+	cfg   *ClientConfig
+	t     Transport
+	dec   *decoder
+	enc   *encoder
+	trace *ClientTrace
 
 	pool []chan *RPCReply
 
@@ -83,15 +82,15 @@ const (
 )
 
 // NewSession creates a new Netconf session, using the supplied Transport.
-func NewSession(t Transport, evtlog, nclog *log.Logger, cfg *ClientConfig) (Session, error) {
+func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, error) {
 
 	si := &sesImpl{
-		cfg:       cfg,
-		t:         t,
-		dec:       newDecoder(t),
-		enc:       newEncoder(t),
-		evtlog:    evtlog,
-		nclog:     nclog,
+		cfg:   cfg,
+		t:     t,
+		dec:   newDecoder(t),
+		enc:   newEncoder(t),
+		trace: ContextClientTrace(ctx),
+
 		hellochan: make(chan *HelloMessage)}
 
 	// Launch goroutine to handle incoming messages from the server.
@@ -150,7 +149,7 @@ func (si *sesImpl) Subscribe(req Request, nchan chan *Notification) (reply *RPCR
 func (si *sesImpl) Close() {
 	err := si.t.Close()
 	if err != nil {
-		si.evtlog.Printf("Session close failed %v\n", err)
+		si.traceError("Session close failed", err)
 	}
 }
 
@@ -266,7 +265,9 @@ func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
 		select {
 		case si.subchan <- notification:
 		default:
-			si.evtlog.Printf("Dropping notification %s\n", notification.XMLName.Local)
+			if si.trace != nil && si.trace.NotificationDropped != nil {
+				si.trace.NotificationDropped(notification)
+			}
 		}
 	}
 	return
@@ -281,7 +282,7 @@ func buildNotification(nmsg *NotificationMessage) *Notification {
 
 func (si *sesImpl) decodeElement(v interface{}, start *xml.StartElement) (err error) {
 	if err = si.dec.DecodeElement(v, start); err != nil {
-		si.evtlog.Printf("DecodeElement() token:%s error: %v\n", start.Name.Local, err)
+		si.traceError(fmt.Sprintf("DecodeElement token:%s", start.Name.Local), err)
 	}
 	return
 }
@@ -353,4 +354,10 @@ func mapError(r *RPCReply) (err error) {
 		}
 	}
 	return
+}
+
+func (si *sesImpl) traceError(context string, err error) {
+	if si.trace != nil && si.trace.Error != nil {
+		si.trace.Error(context, err)
+	}
 }

@@ -58,6 +58,12 @@ type ClientTrace struct {
 
 	// WriteDone is called after a write to the underlying transport.
 	WriteDone func(buf []byte, c int, err error, d time.Duration)
+
+	// Error is called after an error condition has been detected.
+	Error func(context string, err error)
+
+	// NotificationDropped is called when a notification is dropped because the reader is not ready.
+	NotificationDropped func(m *Notification)
 }
 
 // compose modifies t such that it respects the previously-registered hooks in old,
@@ -102,7 +108,7 @@ var DefaultLoggingHooks = &ClientTrace{
 		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
 	},
 	ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
-		log.Printf("ConnectDone target:%s config:%v err:%v took:%d\n", target, clientConfig, err, d)
+		log.Printf("ConnectDone target:%s config:%v err:%v took:%dns\n", target, clientConfig, err, d)
 	},
 	ConnectionClosed: func(err error) {
 		log.Printf("ConnectionClosed err:%v\n", err)
@@ -111,12 +117,19 @@ var DefaultLoggingHooks = &ClientTrace{
 		log.Printf("ReadStart capacity:%d\n", len(p))
 	},
 	ReadDone: func(p []byte, c int, err error, d time.Duration) {
-		log.Printf("ReadDone len:%d err:%v took:%d\n", c, err, d)
+		log.Printf("ReadDone len:%d err:%v took:%dns\n", c, err, d)
 	},
 	WriteStart: func(p []byte) {
 		log.Printf("WriteStart len:%d\n", len(p))
 	},
 	WriteDone: func(p []byte, c int, err error, d time.Duration) {
-		log.Printf("WriteDone len:%d err:%v took:%d\n", c, err, d)
+		log.Printf("WriteDone len:%d err:%v took:%dns\n", c, err, d)
+	},
+
+	Error: func(context string, err error) {
+		log.Printf("Error context:%s err:%v\n", context, err)
+	},
+	NotificationDropped: func(n *Notification) {
+		log.Printf("NotificationDropped %s\n", n.XMLName.Local)
 	},
 }

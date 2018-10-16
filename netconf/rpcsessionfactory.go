@@ -2,17 +2,11 @@ package netconf
 
 import (
 	"context"
-	"log"
-	"os"
 
 	"golang.org/x/crypto/ssh"
 )
 
 // Defines a factory method for instantiating netconf rpc sessions.
-
-var (
-	defaultLogger = log.New(os.Stderr, "logger:", log.Lshortfile)
-)
 
 // NewRPCSession connects to the  target using the ssh configuration, and establishes
 // a netconf session with default configuration.
@@ -30,7 +24,7 @@ func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, targ
 		return
 	}
 
-	if s, err = NewSession(t, defaultLogger, defaultLogger, cfg); err != nil {
+	if s, err = NewSession(ctx, t, cfg); err != nil {
 		t.Close() // nolint: gosec,errcheck
 	}
 	return
