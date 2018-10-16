@@ -36,7 +36,7 @@ func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
 }
 
 type ClientTrace struct {
-	// ConnectStart is called when before starting to connect to a remote server.
+	// ConnectStart is called when starting to connect to a remote server.
 	ConnectStart func(clientConfig *ssh.ClientConfig, target string)
 
 	// ConnectDone is called when the connection attempt compiletes, with err indicating
@@ -71,7 +71,7 @@ type ClientTrace struct {
 	// ExecuteStart is called before the execution of an rpc request.
 	ExecuteStart func(req Request, async bool)
 
-	// ExecuteDone is called after the execution of an rpc request
+	// ExecuteDone is called after the execution of an rpc request.
 	ExecuteDone func(req Request, async bool, res *RPCReply, err error, d time.Duration)
 }
 
