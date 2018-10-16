@@ -12,7 +12,7 @@ import (
 // the client and server.  NETCONF can be layered over any
 // transport protocol that provides a set of basic requirements.
 
-// Transport interface defines what characterisitics make up a NETCONF transport
+// Transport interface defines what characteristics make up a NETCONF transport
 // layer object.
 type Transport interface {
 	io.ReadWriteCloser
