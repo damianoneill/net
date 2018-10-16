@@ -26,7 +26,8 @@ type tImpl struct {
 	trace       *ClientTrace
 }
 
-// NewSSHTransport creates a ...
+// NewSSHTransport creates a new SSH transport, connecting to the target with the supllied client configuration
+// and requesting the specified subsystem.
 func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
 
 	var impl tImpl

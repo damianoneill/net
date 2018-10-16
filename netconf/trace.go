@@ -113,6 +113,12 @@ func (t *ClientTrace) compose(old *ClientTrace) {
 }
 
 var DefaultLoggingHooks = &ClientTrace{
+	Error: func(context string, err error) {
+		log.Printf("Error context:%s err:%v\n", context, err)
+	},
+}
+
+var DsiagnosticLoggingHooks = &ClientTrace{
 	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
 		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
 	},

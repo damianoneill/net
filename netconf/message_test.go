@@ -5,8 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -16,10 +14,6 @@ import (
 	mocks "github.com/damianoneill/net/netconf/mocks"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
-)
-
-var (
-	testLogger = log.New(os.Stderr, "logger:", log.Lshortfile)
 )
 
 const (

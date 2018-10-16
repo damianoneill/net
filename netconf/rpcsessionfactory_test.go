@@ -30,7 +30,7 @@ func TestSessionSetupFailure(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	s, err := NewRPCSessionWithConfig(WithClientTrace(context.Background(), DefaultLoggingHooks), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
 	assert.Error(t, err, "Expecting new session to fail")
 	assert.Nil(t, s, "Session should be nil")
 }
