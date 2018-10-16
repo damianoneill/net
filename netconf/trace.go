@@ -118,7 +118,7 @@ var DefaultLoggingHooks = &ClientTrace{
 	},
 }
 
-var DsiagnosticLoggingHooks = &ClientTrace{
+var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
 		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
 	},
