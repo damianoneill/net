@@ -18,5 +18,5 @@ before_script:
 
 script:
 - gometalinter --vendor --deadline=120s ./...
-- go test -v -timeout 8s -race ./... -coverprofile=coverage.out # Run all the tests with the race detector enabled
+- go test -v -timeout 120s -race ./... -coverprofile=coverage.out # Run all the tests with the race detector enabled
 - goveralls -coverprofile=coverage.out -service travis-ci
