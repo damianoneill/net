@@ -31,7 +31,7 @@ func TestSessionSetupFailure(t *testing.T) {
 	}
 
 	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
-	assert.Error(t, err, "Expecting new session to fail")
+	assert.Error(t, err, "Expecting new session to fail - no hello from server")
 	assert.Nil(t, s, "Session should be nil")
 }
 

@@ -20,14 +20,24 @@ type SSHServer struct {
 	listener net.Listener
 }
 
-// NewSSHServer deflivers a new test SSH Server.
+// Handler is a function that handles i/o to/from an SSH channel
+type Handler func(t *testing.T, ch ssh.Channel)
+
+// NewSSHServer deflivers a new test SSH Server, with a Handler that simply echoes lines received.
 // The server implements password authentication with the given credentials.
 func NewSSHServer(t *testing.T, uname, password string) *SSHServer {
+
+	return NewSSHServerHandler(t, uname, password, echoer)
+}
+
+// NewSSHServer deflivers a new test SSH Server, with a custom channel handler.
+// The server implements password authentication with the given credentials.
+func NewSSHServerHandler(t *testing.T, uname, password string, handler Handler) *SSHServer {
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err, "Listen failed")
 
-	go acceptConnections(t, listener, newSSHServerConfig(t, uname, password))
+	go acceptConnections(t, listener, newSSHServerConfig(t, uname, password), handler)
 
 	return &SSHServer{listener: listener}
 }
@@ -43,7 +53,7 @@ func (ts *SSHServer) Close() {
 	ts.listener.Close()
 }
 
-func acceptConnections(t *testing.T, listener net.Listener, config *ssh.ServerConfig) {
+func acceptConnections(t *testing.T, listener net.Listener, config *ssh.ServerConfig, handler Handler) {
 	// nolint: gosec, errcheck
 	for {
 		nConn, err := listener.Accept()
@@ -72,17 +82,7 @@ func acceptConnections(t *testing.T, listener net.Listener, config *ssh.ServerCo
 
 			go func() {
 				defer dataChan.Close()
-				chReader := bufio.NewReader(dataChan)
-				chWriter := bufio.NewWriter(dataChan)
-				for {
-					input, err := chReader.ReadString('\n')
-					if err != nil {
-						return
-					}
-					_, err = chWriter.WriteString(fmt.Sprintf("GOT:%s", input))
-					assert.NoError(t, err, "Write failed")
-					chWriter.Flush()
-				}
+				handler(t, dataChan)
 			}()
 		}
 	}
@@ -133,4 +133,19 @@ func encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 	privatePEM := pem.EncodeToMemory(&privBlock)
 
 	return privatePEM
+}
+
+// Simple Handler implementation that echoes lines.
+func echoer(t *testing.T, ch ssh.Channel) {
+	chReader := bufio.NewReader(ch)
+	chWriter := bufio.NewWriter(ch)
+	for {
+		input, err := chReader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		_, err = chWriter.WriteString(fmt.Sprintf("GOT:%s", input))
+		assert.NoError(t, err, "Write failed")
+		chWriter.Flush()
+	}
 }
