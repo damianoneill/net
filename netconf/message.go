@@ -204,7 +204,7 @@ func (si *sesImpl) exchangeHelloMessages() (err error) {
 		return
 	}
 
-	if serverSupportsChunkedFraming(si.hello) {
+	if peerSupportsChunkedFraming(si.hello) {
 		// Update the codec to use chunked framing from now.
 		enableChunkedFraming(si.dec, si.enc)
 	}
@@ -212,7 +212,7 @@ func (si *sesImpl) exchangeHelloMessages() (err error) {
 	return
 }
 
-func serverSupportsChunkedFraming(hello *HelloMessage) bool {
+func peerSupportsChunkedFraming(hello *HelloMessage) bool {
 	for _, capability := range hello.Capabilities {
 		if capability == CapBase11 {
 			return true
@@ -231,6 +231,7 @@ func (si *sesImpl) handleIncomingMessages() {
 	for {
 		token, err := si.dec.Token()
 		if err != nil {
+			si.traceError("Receive Token", err)
 			break
 		}
 

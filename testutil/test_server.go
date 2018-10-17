@@ -5,13 +5,12 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
-	"testing"
 
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -20,19 +19,21 @@ type SSHServer struct {
 	listener net.Listener
 }
 
-// Handler is a function that handles i/o to/from an SSH channel
-type Handler func(t *testing.T, ch ssh.Channel)
+type SSHHandler interface {
+	// Handler is a function that handles i/o to/from an SSH channel
+	Handle(t assert.TestingT, ch ssh.Channel)
+}
 
 // NewSSHServer deflivers a new test SSH Server, with a Handler that simply echoes lines received.
 // The server implements password authentication with the given credentials.
-func NewSSHServer(t *testing.T, uname, password string) *SSHServer {
+func NewSSHServer(t assert.TestingT, uname, password string) *SSHServer {
 
-	return NewSSHServerHandler(t, uname, password, echoer)
+	return NewSSHServerHandler(t, uname, password, &echoer{})
 }
 
 // NewSSHServer deflivers a new test SSH Server, with a custom channel handler.
 // The server implements password authentication with the given credentials.
-func NewSSHServerHandler(t *testing.T, uname, password string, handler Handler) *SSHServer {
+func NewSSHServerHandler(t assert.TestingT, uname, password string, handler SSHHandler) *SSHServer {
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err, "Listen failed")
@@ -53,7 +54,7 @@ func (ts *SSHServer) Close() {
 	ts.listener.Close()
 }
 
-func acceptConnections(t *testing.T, listener net.Listener, config *ssh.ServerConfig, handler Handler) {
+func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, handler SSHHandler) {
 	// nolint: gosec, errcheck
 	for {
 		nConn, err := listener.Accept()
@@ -82,13 +83,13 @@ func acceptConnections(t *testing.T, listener net.Listener, config *ssh.ServerCo
 
 			go func() {
 				defer dataChan.Close()
-				handler(t, dataChan)
+				handler.Handle(t, dataChan)
 			}()
 		}
 	}
 }
 
-func newSSHServerConfig(t *testing.T, uname, password string) *ssh.ServerConfig {
+func newSSHServerConfig(t assert.TestingT, uname, password string) *ssh.ServerConfig {
 	config := &ssh.ServerConfig{
 		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
 			if c.User() == uname && string(pass) == password {
@@ -102,7 +103,7 @@ func newSSHServerConfig(t *testing.T, uname, password string) *ssh.ServerConfig 
 	return config
 }
 
-func generateHostKey(t *testing.T) (hostkey ssh.Signer) {
+func generateHostKey(t assert.TestingT) (hostkey ssh.Signer) {
 
 	reader := rand.Reader
 	bitSize := 2048
@@ -114,7 +115,7 @@ func generateHostKey(t *testing.T) (hostkey ssh.Signer) {
 			return
 		}
 	}
-	t.Error("Failed to generate host key", err)
+	t.Errorf("Failed to generate host key %v", err)
 	return
 }
 
@@ -135,8 +136,10 @@ func encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 	return privatePEM
 }
 
+type echoer struct{}
+
 // Simple Handler implementation that echoes lines.
-func echoer(t *testing.T, ch ssh.Channel) {
+func (e *echoer) Handle(t assert.TestingT, ch ssh.Channel) {
 	chReader := bufio.NewReader(ch)
 	chWriter := bufio.NewWriter(ch)
 	for {

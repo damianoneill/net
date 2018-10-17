@@ -35,6 +35,24 @@ func TestSessionSetupFailure(t *testing.T) {
 	assert.Nil(t, s, "Session should be nil")
 }
 
+func TestSessionSetupSuccess(t *testing.T) {
+
+	handler := newHandler(t, 4)
+	ts := testutil.NewSSHServerHandler(t, "testUser", "testPassword", handler)
+	defer ts.Close()
+
+	sshConfig := &ssh.ClientConfig{
+		User:            "testUser",
+		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	ctx := WithClientTrace(context.Background(), DiagnosticLoggingHooks)
+	s, err := NewRPCSessionWithConfig(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	assert.NoError(t, err, "Expecting new session to succeed")
+	assert.NotNil(t, s, "Session should not be nil")
+}
+
 // Simple real NE access test
 
 // func TestRealNewSession(t *testing.T) {
