@@ -30,3 +30,6 @@ The package can be downloaded with the following command
 ```bash
 go get -u github.com/damianoneill/net/...
 ```
+## Credits
+
+The implementation of the framing codec in the rfc6242 package has been adapted from an implementation by [Andrew Fort](https://github.com/andaru) - https://github.com/andaru/netconf.
