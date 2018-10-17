@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/damianoneill/net.svg?branch=master)](https://travis-ci.org/damianoneill/net)
 [![GitHub release](https://img.shields.io/github/release/damianoneill/net.svg)](https://github.com/damianoneill/net/releases)
-[![Go Report Card](https://goreportcard.com/badge/damianoneill/net)](http://goreportcard.com/report/damianoneill/net)
+[![Go Report Card](https://goreportcard.com/badge/github.com/damianoneill/net)](https://goreportcard.com/report/github.com/damianoneill/net)
 [![license](https://img.shields.io/github/license/damianoneill/net.svg)](https://github.com/damianoneill/net/blob/master/LICENSE)
 [![Coverage Status](https://coveralls.io/repos/github/damianoneill/net/badge.svg?branch=master)](https://coveralls.io/github/damianoneill/net?branch=master)
 
