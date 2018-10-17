@@ -126,10 +126,13 @@ func TestSubscribe(t *testing.T) {
 
 	nch := make(chan *Notification)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	// Capture notification that we expect.
 	var result *Notification
 	go func() {
 		result = <-nch
+		wg.Done()
 	}()
 
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
@@ -137,7 +140,7 @@ func TestSubscribe(t *testing.T) {
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
 	// Wait for notification.
-	time.Sleep(time.Millisecond * 200)
+	wg.Wait()
 	assert.NotNil(t, result, "Expected notification")
 	assert.Equal(t, "netconf-session-start", result.XMLName.Local, "Unexpected event type")
 	assert.Equal(t, "urn:ietf:params:xml:ns:yang:ietf-netconf-notifications", result.XMLName.Space, "Unexpected event NS")
