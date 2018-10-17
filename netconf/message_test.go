@@ -364,17 +364,13 @@ func (ms *mockServer) ignoreRequest() {
 }
 
 func (ms *mockServer) longRunningRequest() {
-	wcount := 0
 	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
 		<-ms.rwSynch
 		return 0
 	}, io.EOF)
 
 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		if wcount == 0 {
-			time.AfterFunc(time.Minute, func() { ms.rwSynch <- true })
-			wcount++
-		}
+		// Do nothing - no reply.
 		return len(buf)
 	}, nil).Twice()
 }
