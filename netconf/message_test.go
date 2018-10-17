@@ -126,10 +126,13 @@ func TestSubscribe(t *testing.T) {
 
 	nch := make(chan *Notification)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	// Capture notification that we expect.
 	var result *Notification
 	go func() {
 		result = <-nch
+		wg.Done()
 	}()
 
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
@@ -137,7 +140,7 @@ func TestSubscribe(t *testing.T) {
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
 	// Wait for notification.
-	time.Sleep(time.Millisecond * 200)
+	wg.Wait()
 	assert.NotNil(t, result, "Expected notification")
 	assert.Equal(t, "netconf-session-start", result.XMLName.Local, "Unexpected event type")
 	assert.Equal(t, "urn:ietf:params:xml:ns:yang:ietf-netconf-notifications", result.XMLName.Space, "Unexpected event NS")
@@ -361,17 +364,13 @@ func (ms *mockServer) ignoreRequest() {
 }
 
 func (ms *mockServer) longRunningRequest() {
-	wcount := 0
 	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
 		<-ms.rwSynch
 		return 0
 	}, io.EOF)
 
 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		if wcount == 0 {
-			time.AfterFunc(time.Minute, func() { ms.rwSynch <- true })
-			wcount++
-		}
+		// Do nothing - no reply.
 		return len(buf)
 	}, nil).Twice()
 }
