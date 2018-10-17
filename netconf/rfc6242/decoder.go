@@ -27,19 +27,17 @@ type Decoder struct {
 	// Framer.
 	Input io.Reader
 
-	framer     FramerFn
-	s          *bufio.Scanner
-	pr         *io.PipeReader
-	pw         *io.PipeWriter
-	piped      int
-	afterFirst func()
+	framer FramerFn
+	s      *bufio.Scanner
+	pr     *io.PipeReader
+	pw     *io.PipeWriter
+	piped  int
 
 	scanErr       error
 	chunkDataLeft uint64 // state
 	bufSize       int    // config
 	anySeen       bool
 	eofOK         bool
-	reading       bool
 }
 
 // NewDecoder creates a new RFC6242 transport framing decoder reading from
@@ -80,8 +78,8 @@ func (d *Decoder) Read(b []byte) (n int, err error) {
 		}
 		d.piped = len(token)
 		go func() {
-			if _, err := d.pw.Write(token); err != nil {
-				d.pr.CloseWithError(err)
+			if _, err = d.pw.Write(token); err != nil {
+				d.pr.CloseWithError(err) // nolint : gosec
 			}
 		}()
 		n, err = d.pr.Read(b)

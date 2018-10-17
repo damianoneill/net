@@ -35,6 +35,7 @@ func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
 	return ctx
 }
 
+// ClientTrace defines a structure for handling trace events
 type ClientTrace struct {
 	// ConnectStart is called when starting to connect to a remote server.
 	ConnectStart func(clientConfig *ssh.ClientConfig, target string)
@@ -112,12 +113,14 @@ func (t *ClientTrace) compose(old *ClientTrace) {
 	}
 }
 
+// DefaultLoggingHooks provides a default logging hook
 var DefaultLoggingHooks = &ClientTrace{
 	Error: func(context string, err error) {
 		log.Printf("Error context:%s err:%v\n", context, err)
 	},
 }
 
+// DiagnosticLoggingHooks provides a default diagnostic hook
 var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
 		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)

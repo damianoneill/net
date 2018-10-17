@@ -12,7 +12,7 @@ import (
 // the client and server.  NETCONF can be layered over any
 // transport protocol that provides a set of basic requirements.
 
-// Transport interface defines what characterisitics make up a NETCONF transport
+// Transport interface defines what characteristics make up a NETCONF transport
 // layer object.
 type Transport interface {
 	io.ReadWriteCloser
@@ -28,6 +28,7 @@ type tImpl struct {
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
 // and requesting the specified subsystem.
+// nolint : gosec
 func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
 
 	var impl tImpl
