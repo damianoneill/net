@@ -21,7 +21,7 @@ func SetChunkedFraming(objects ...interface{}) {
 		switch obj := obj.(type) {
 		case *Decoder:
 			if obj != nil {
-				obj.framer = decoderChunked
+				obj.setFramer(decoderChunked)
 			}
 		case *Encoder:
 			if obj != nil {
