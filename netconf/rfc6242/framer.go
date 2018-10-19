@@ -45,6 +45,7 @@ var (
 
 // decoderEndOfMessage is the NETCONF 1.0 end-of-message delimited
 // decoding function.
+// nolint: gocyclo
 func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	d.eofOK = false
 	var i int
