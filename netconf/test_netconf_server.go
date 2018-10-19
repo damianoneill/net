@@ -2,8 +2,6 @@ package netconf
 
 import (
 	"encoding/xml"
-	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -56,6 +54,16 @@ var DefaultRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessag
 	assert.NoError(h.t, err, "Failed to encode response")
 }
 
+var FailingRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessage) {
+	reply := &RPCReplyMessage{
+		MessageID: req.MessageID,
+		Errors: []RPCError{
+			RPCError{Severity: "error", Message: "oops"}},
+	}
+	err := h.enc.encode(reply)
+	assert.NoError(h.t, err, "Failed to encode response")
+}
+
 var CloseRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessage) {
 	h.ch.Close()
 }
@@ -70,9 +78,10 @@ type netconfSessionHandler struct {
 	enc *encoder
 	dec *decoder
 
-	hellochan   chan bool
-	clientHello *HelloMessage
-	sid         int
+	capabilities []string
+	hellochan    chan bool
+	clientHello  *HelloMessage
+	sid          int
 
 	startwg *sync.WaitGroup
 
@@ -84,45 +93,47 @@ type netconfSessionHandler struct {
 func newHandler(t assert.TestingT, sid int) *netconfSessionHandler {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	return &netconfSessionHandler{t: t, sid: sid, hellochan: make(chan bool), startwg: wg}
+	return &netconfSessionHandler{t: t,
+		sid:          sid,
+		hellochan:    make(chan bool),
+		startwg:      wg,
+		capabilities: DefaultCapabilities}
 }
 
 func (h *netconfSessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
 	h.ch = ch
-	h.dec = newDecoder(injectDiagReader(ch))
+	h.dec = newDecoder(ch)
 	h.enc = newEncoder(ch)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+
+	// Send server hello to client.
+	err := h.enc.encode(&HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
+	assert.NoError(h.t, err, "Failed to send server hello")
+
 	go h.handleIncomingMessages(wg)
-	h.exchangeHelloMessages()
+
+	h.waitForClientHello()
+
+	// Signal server has completed setup
 	h.startwg.Done()
 
+	// Wait for message handling routine to finish.
 	wg.Wait()
-
 }
 
 func (h *netconfSessionHandler) waitStart() {
 	h.startwg.Wait()
 }
 
-type diagReader struct {
-	r io.Reader
-}
-
-func (dr *diagReader) Read(p []byte) (int, error) {
-	fmt.Printf("Server ReadStart %d\n", len(p))
-	c, err := dr.r.Read(p)
-	fmt.Printf("Server ReadDone %d %v %s\n", c, err, string(p[:c]))
-	return c, err
-}
-
-func injectDiagReader(r io.Reader) io.Reader {
-	return &diagReader{r: r}
-}
-
 func (h *netconfSessionHandler) withRequestHandler(rh RequestHandler) *netconfSessionHandler {
 	h.reqHandlers = append(h.reqHandlers, rh)
+	return h
+}
+
+func (h *netconfSessionHandler) withCapabilities(caps []string) *netconfSessionHandler {
+	h.capabilities = caps
 	return h
 }
 
@@ -137,10 +148,7 @@ func (h *netconfSessionHandler) close() {
 	h.ch.Close()
 }
 
-func (h *netconfSessionHandler) exchangeHelloMessages() (err error) {
-
-	err = h.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities, SessionID: h.sid})
-	assert.NoError(h.t, err, "Failed to send server hello")
+func (h *netconfSessionHandler) waitForClientHello() (err error) {
 
 	// Wait for the input handler to send the client hello.
 	select {
@@ -150,24 +158,16 @@ func (h *netconfSessionHandler) exchangeHelloMessages() (err error) {
 
 	assert.NotNil(h.t, h.clientHello, "Failed to get client hello")
 
-	// if peerSupportsChunkedFraming(h.clientHello) {
-
-	// 	// Update the codec to use chunked framing from now.
-	// 	enableChunkedFraming(h.dec, h.enc)
-	// 	fmt.Println("Server enabled chunks")
-	// }
-
 	return
 }
 
 func (h *netconfSessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
-	fmt.Printf("Server - handleIncoming\n")
+
 	defer wg.Done()
 
 	// Loop, looking for a start element type of hello, rpc-reply.
 	for {
 		token, err := h.dec.Token()
-		fmt.Printf("Server - decode err %v\n", err)
 		if err != nil {
 			break
 		}
@@ -196,11 +196,10 @@ func (h *netconfSessionHandler) handleHello(token xml.StartElement) {
 
 	h.decodeElement(&h.clientHello, &token)
 
-	if peerSupportsChunkedFraming(h.clientHello) {
+	if peerSupportsChunkedFraming(h.clientHello.Capabilities) && peerSupportsChunkedFraming(h.capabilities) {
 
 		// Update the codec to use chunked framing from now.
 		enableChunkedFraming(h.dec, h.enc)
-		fmt.Println("Server enabled chunks")
 	}
 
 	h.hellochan <- true
@@ -229,3 +228,18 @@ func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
 	}
 	return
 }
+
+// type diagReader struct {
+// 	r io.Reader
+// }
+
+// func (dr *diagReader) Read(p []byte) (int, error) {
+// 	fmt.Printf("Server ReadStart %d\n", len(p))
+// 	c, err := dr.r.Read(p)
+// 	fmt.Printf("Server ReadDone %d %v %s\n", c, err, string(p[:c]))
+// 	return c, err
+// }
+
+// func injectDiagReader(r io.Reader) io.Reader {
+// 	return &diagReader{r: r}
+// }

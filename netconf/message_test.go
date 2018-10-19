@@ -17,7 +17,7 @@ const (
 	endOfMessage = `]]>]]>`
 )
 
-func TestNewSession(t *testing.T) {
+func TestNewSessionWithChunkedEncoding(t *testing.T) {
 
 	server, tr := testNetconfServer(t)
 	ncs, err := NewSession(context.Background(), tr, defaultConfig)
@@ -33,30 +33,46 @@ func TestNewSession(t *testing.T) {
 	ncs.Close()
 }
 
-// func TestNewSessionWithChunkedEncoding(t *testing.T) {
-
-// 	ms := newMockServerWithBase(CapBase11)
-// 	ms.closeConnection()
-
-// 	ncs, err := testSession(ms)
-
-// 	assert.NoError(t, err, "Not expecting new session to fail")
-// 	assert.NotNil(t, ncs, "Session should be non-nil")
-// 	assert.NotNil(t, ms.clientHello, "Should have received hello")
-// 	assert.Contains(t, ms.clientHello.Capabilities, CapBase11, "Did not send expected server capabilities")
-
-// 	ncs.Close()
-// }
-
 func TestExecute(t *testing.T) {
 
 	_, tr := testNetconfServer(t)
-	ncs, err := NewSession(WithClientTrace(context.Background(), DiagnosticLoggingHooks), tr, defaultConfig)
+	ncs, err := NewSession(context.Background(), tr, defaultConfig)
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
+}
+
+func TestExecuteFailure(t *testing.T) {
+
+	server, tr := testNetconfServer(t)
+	server.withRequestHandler(FailingRequestHandler)
+	ncs, err := NewSession(context.Background(), tr, defaultConfig)
+
+	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	assert.Error(t, err, "Expecting exec to fail")
+	assert.Equal(t, "netconf rpc [error] 'oops'", err.Error(), "Expected error")
+	assert.NotNil(t, reply, "Reply should be non-nil")
+}
+
+func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
+
+	ncServer := newHandler(t, 4).withCapabilities([]string{CapBase10})
+	tr := getSSHTransport(t, ncServer)
+
+	ncs, err := NewSession(WithClientTrace(context.Background(), DiagnosticLoggingHooks), tr, defaultConfig)
+
+	assert.NoError(t, err, "Not expecting new session to fail")
+	assert.NotNil(t, ncs, "Session should be non-nil")
+
+	assert.False(t, peerSupportsChunkedFraming(ncs.(*sesImpl).hello.Capabilities), "Server not expected to support chunked framing")
+
+	reply, _ := ncs.Execute(Request(`<get><response/></get>`))
+	assert.NotNil(t, reply, "Reply should be non-nil")
+	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
+
+	ncs.Close()
 }
 
 func TestExecuteAsync(t *testing.T) {
@@ -269,112 +285,15 @@ func notificationEvent() string {
 		`</netconf-session-start>`
 }
 
-// type mockServer struct {
-// 	transport   *mocks.Transport
-// 	clientHello HelloMessage
-// 	rwSynch     chan interface{}
-// }
-
-// func newMockServer() *mockServer {
-// 	return newMockServerWithBase(CapBase10)
-// }
-
-// func newMockServerWithBase(capbase string) *mockServer {
-// 	ms := &mockServer{transport: &mocks.Transport{}, rwSynch: make(chan interface{})}
-// 	ms.sendMessage(serverHelloWithBase(capbase)).Once()
-// 	ms.captureMessage(&ms.clientHello)
-// 	ms.transport.On("Close").Return(func() error {
-// 		close(ms.rwSynch)
-// 		return nil
-// 	})
-// 	return ms
-// }
-
-// func (ms *mockServer) sendMessage(msg string) *mock.Call {
-// 	return ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-// 		i := []byte(msg + endOfMessage)
-// 		copy(buf, i)
-// 		return len(i)
-// 	}, nil).Once()
-// }
-
-// func (ms *mockServer) captureMessage(msg interface{}) {
-// 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-// 		xml.Unmarshal(buf, msg)
-// 		return len(buf)
-// 	}, nil).Once()
-// 	// Ignore the end of message delimiter.
-// 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-// 		return len(buf)
-// 	}, nil).Once()
-// }
-
-// func (ms *mockServer) replyToRequests() {
-// 	ms.replyToNRequests(0)
-// }
-
-// func (ms *mockServer) replyToNRequests(count int) {
-
-// 	call := ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-// 		body := <-ms.rwSynch
-// 		i := []byte(rpcReply(body.(string)) + endOfMessage)
-// 		copy(buf, i)
-// 		return len(i)
-// 	}, nil)
-// 	if count > 0 {
-// 		call.Times(count)
-// 	}
-
-// 	call = ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-// 		if !strings.Contains(string(buf), "]]>]]>") {
-// 			ms.rwSynch <- extractRequestBody(buf)
-// 		}
-// 		return len(buf)
-// 	}, nil)
-// 	if count > 0 {
-// 		call.Times(count * 2)
-// 	}
-// }
-
-// func (ms *mockServer) ignoreRequest() {
-// 	wcount := 0
-// 	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-// 		<-ms.rwSynch
-// 		return 0
-// 	}, io.EOF)
-
-// 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-// 		if wcount == 0 {
-// 			ms.rwSynch <- true
-// 			wcount++
-// 		}
-// 		return len(buf)
-// 	}, nil).Twice()
-// }
-
-// func (ms *mockServer) longRunningRequest() {
-// 	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-// 		<-ms.rwSynch
-// 		return 0
-// 	}, io.EOF)
-
-// 	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-// 		// Do nothing - no reply.
-// 		return len(buf)
-// 	}, nil).Twice()
-// }
-
-// func (ms *mockServer) closeConnection() {
-// 	ms.transport.On("Read", mock.Anything).Return(0, io.EOF)
-// }
-
-// func testSession(ms *mockServer) (Session, error) {
-// 	return NewSession(context.Background(), ms.transport, defaultConfig)
-// }
-
 func testNetconfServer(t assert.TestingT) (*netconfSessionHandler, Transport) {
 	server := newHandler(t, 4)
-	ts := testutil.NewSSHServerHandler(t, "testUser", "testPassword", server)
+	tr := getSSHTransport(t, server)
+	return server, tr
+}
+
+func getSSHTransport(t assert.TestingT, handler *netconfSessionHandler) Transport {
+
+	ts := testutil.NewSSHServerHandler(t, "testUser", "testPassword", handler)
 
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
@@ -385,7 +304,7 @@ func testNetconfServer(t assert.TestingT) (*netconfSessionHandler, Transport) {
 	tr, err := NewSSHTransport(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), "netconf")
 
 	assert.NoError(t, err, "Failed to connect to server")
-	return server, tr
+	return tr
 }
 
 // Simple real NE access tests

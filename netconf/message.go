@@ -49,7 +49,7 @@ type sesImpl struct {
 
 	pool []chan *RPCReply
 
-	hellochan chan *HelloMessage
+	hellochan chan bool
 	responseq []chan *RPCReply
 	subchan   chan *Notification
 
@@ -91,12 +91,19 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 		enc:   newEncoder(t),
 		trace: ContextClientTrace(ctx),
 
-		hellochan: make(chan *HelloMessage)}
+		hellochan: make(chan bool)}
+
+	// Send hello
+	err := si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
+	if err != nil {
+		si.Close()
+		return nil, err
+	}
 
 	// Launch goroutine to handle incoming messages from the server.
 	go si.handleIncomingMessages()
 
-	err := si.exchangeHelloMessages()
+	err = si.waitForServerHello()
 	if err != nil {
 		si.Close()
 		return nil, err
@@ -183,37 +190,18 @@ func (si *sesImpl) ID() int {
 	return si.hello.SessionID
 }
 
-func (si *sesImpl) exchangeHelloMessages() (err error) {
+func (si *sesImpl) waitForServerHello() (err error) {
 
-	err = si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
-	if err != nil {
-		return
-	}
-
-	// Wait for the input handler to send the server hello.
 	select {
-	case si.hello = <-si.hellochan:
+	case <-si.hellochan:
 	case <-time.After(time.Duration(si.cfg.setupTimeoutSecs) * time.Second):
-	}
-
-	if si.hello == nil {
 		err = errors.New("Failed to get Hello from server")
-		if si.trace != nil && si.trace.Error != nil {
-			si.trace.Error("NewSession", err)
-		}
-		return
 	}
-
-	if peerSupportsChunkedFraming(si.hello) {
-		// Update the codec to use chunked framing from now.
-		enableChunkedFraming(si.dec, si.enc)
-	}
-
 	return
 }
 
-func peerSupportsChunkedFraming(hello *HelloMessage) bool {
-	for _, capability := range hello.Capabilities {
+func peerSupportsChunkedFraming(caps []string) bool {
+	for _, capability := range caps {
 		if capability == CapBase11 {
 			return true
 		}
@@ -231,7 +219,6 @@ func (si *sesImpl) handleIncomingMessages() {
 	for {
 		token, err := si.dec.Token()
 		if err != nil {
-			si.traceError("Receive Token", err)
 			break
 		}
 
@@ -262,11 +249,18 @@ func (si *sesImpl) handleToken(token xml.Token) (err error) {
 
 func (si *sesImpl) handleHello(token xml.StartElement) (err error) {
 	// Decode the hello element and send it down the channel to trigger the rest of the session setup.
-	hello := HelloMessage{}
-	if err = si.decodeElement(&hello, &token); err != nil {
+
+	if err = si.decodeElement(&si.hello, &token); err != nil {
+		si.hellochan <- false
 		return
 	}
-	si.hellochan <- &hello
+
+	if peerSupportsChunkedFraming(si.hello.Capabilities) {
+		// Update the codec to use chunked framing from now.
+		enableChunkedFraming(si.dec, si.enc)
+	}
+
+	si.hellochan <- true
 	return
 }
 
