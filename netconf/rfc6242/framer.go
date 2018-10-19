@@ -45,6 +45,7 @@ var (
 
 // decoderEndOfMessage is the NETCONF 1.0 end-of-message delimited
 // decoding function.
+// nolint: gocyclo
 func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	d.eofOK = false
 	var i int
@@ -82,6 +83,13 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 			// their peer has the appropriate capability (data
 			// contained within token).
 			if d.eofOK = i == len(tokenEOM); d.eofOK {
+
+				// If there is a pending framer, it can now take effect (see comment in decoder setFramer())
+				if d.pendingFramer != nil {
+					d.framer = d.pendingFramer
+					d.pendingFramer = nil
+					return
+				}
 				d.anySeen = true
 				if !atEOF {
 					return
