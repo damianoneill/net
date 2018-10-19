@@ -57,6 +57,8 @@ type sesImpl struct {
 	reqLock sync.Mutex
 	pchLock sync.Mutex
 	rchLock sync.Mutex
+
+	notificationDropCount int
 }
 
 // DefaultCapabilities sets the default capabilities of the client library
@@ -293,6 +295,7 @@ func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
 		select {
 		case si.subchan <- notification:
 		default:
+			si.notificationDropCount++
 			if si.trace != nil && si.trace.NotificationDropped != nil {
 				si.trace.NotificationDropped(notification)
 			}

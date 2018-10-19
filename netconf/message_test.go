@@ -3,7 +3,6 @@ package netconf
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -11,10 +10,6 @@ import (
 	"github.com/damianoneill/net/testutil"
 	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
-)
-
-const (
-	endOfMessage = `]]>]]>`
 )
 
 func TestNewSessionWithChunkedEncoding(t *testing.T) {
@@ -36,7 +31,8 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 func TestExecute(t *testing.T) {
 
 	_, tr := testNetconfServer(t)
-	ncs, err := NewSession(context.Background(), tr, defaultConfig)
+	ncs, _ := NewSession(context.Background(), tr, defaultConfig)
+	defer ncs.Close()
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
@@ -48,7 +44,8 @@ func TestExecuteFailure(t *testing.T) {
 
 	server, tr := testNetconfServer(t)
 	server.withRequestHandler(FailingRequestHandler)
-	ncs, err := NewSession(context.Background(), tr, defaultConfig)
+	ncs, _ := NewSession(context.Background(), tr, defaultConfig)
+	defer ncs.Close()
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.Error(t, err, "Expecting exec to fail")
@@ -155,6 +152,12 @@ func TestSubscribe(t *testing.T) {
 	assert.NotNil(t, result.EventTime, "Unexpected nil event time")
 	assert.Equal(t, notificationEvent(), result.Event, "Unexpected event XML")
 
+	// Get server to send notifications, wait a while for them to arrive and confirm they've been dropped.
+	server.sendNotification(notificationEvent())
+	server.sendNotification(notificationEvent())
+	time.Sleep(time.Millisecond * time.Duration(500))
+	assert.Equal(t, 2, ncs.(*sesImpl).notificationDropCount, "Expected notification to have been dropped")
+
 	server.close()
 	result = <-nch
 	assert.Nil(t, result, "No more notifications expected")
@@ -231,50 +234,6 @@ func BenchmarkTemplateParallel(b *testing.B) {
 			ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
 		}
 	})
-}
-
-func extractRequestBody(buf []byte) string {
-	re := regexp.MustCompile("<get>(.*)</get>")
-	matches := re.FindStringSubmatch(string(buf))
-	if len(matches) > 0 {
-		return matches[1]
-	}
-	return ""
-}
-
-func serverHelloWithBase(base string) string {
-	return `<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">` +
-		`<capabilities>` +
-		`<capability>` +
-		base +
-		`</capability>` +
-		`<capability>` +
-		`urn:ietf:params:netconf:capability:startup:1.0` +
-		`</capability>` +
-		`<capability>` +
-		`http://example.net/router/2.3/myfeature` +
-		`</capability>` +
-		`</capabilities>` +
-		`<session-id>4</session-id>` +
-		`</hello>`
-}
-
-func rpcReply(body string) string {
-	return ` <rpc-reply message-id="101"` +
-		`xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"` +
-		`xmlns:ex="http://example.net/content/1.0"` +
-		`ex:user-id="fred">` +
-		`<data>` +
-		body +
-		`</data>` +
-		`</rpc-reply>`
-}
-
-func notificationMessage() string {
-	return `<notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">` +
-		`<eventTime>2018-10-10T09:23:07Z</eventTime>` +
-		notificationEvent() +
-		`</notification>`
 }
 
 func notificationEvent() string {
