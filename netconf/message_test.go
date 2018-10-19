@@ -25,6 +25,8 @@ func TestNewSession(t *testing.T) {
 	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
 	assert.Equal(t, 4, ncs.ID(), "Session id not defined correctly")
+
+	server.waitStart()
 	assert.NotNil(t, server.clientHello, "Should have sent hello")
 	assert.Equal(t, server.clientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
 
@@ -70,10 +72,13 @@ func TestExecuteAsync(t *testing.T) {
 	ncs.ExecuteAsync(Request(`<get><test3/></get>`), rch3)
 
 	reply := <-rch3
+	assert.NotNil(t, reply, "Reply should not be nil")
 	assert.Equal(t, `<data><test3/></data>`, reply.Data, "Reply should contain response data")
 	reply = <-rch2
+	assert.NotNil(t, reply, "Reply should not be nil")
 	assert.Equal(t, `<data><test2/></data>`, reply.Data, "Reply should contain response data")
 	reply = <-rch1
+	assert.NotNil(t, reply, "Reply should not be nil")
 	assert.Equal(t, `<data><test1/></data>`, reply.Data, "Reply should contain response data")
 }
 
@@ -121,6 +126,7 @@ func TestSubscribe(t *testing.T) {
 	}()
 
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
+	assert.NotNil(t, reply, "create-subscription failed")
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
 	server.sendNotification(notificationEvent())
@@ -179,6 +185,7 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 				assert.NoError(t, err, "Not expecting exec to fail")
 				reply := <-rchan
 
+				assert.NotNil(t, reply, "Reply should not be nil")
 				assert.Equal(t, replybody, reply.Data, "Reply should contain response data")
 			}
 		}(r)
