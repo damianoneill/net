@@ -40,7 +40,7 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
 }
 
-func TestExecuteFailure(t *testing.T) {
+func TestExecuteWithFailingRequest(t *testing.T) {
 
 	server, tr := testNetconfServer(t)
 	server.withRequestHandler(FailingRequestHandler)
@@ -52,10 +52,24 @@ func TestExecuteFailure(t *testing.T) {
 	assert.Equal(t, "netconf rpc [error] 'oops'", err.Error(), "Expected error")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 }
+func TestExecuteFailure(t *testing.T) {
+
+	server, tr := testNetconfServer(t)
+	server.withRequestHandler(FailingRequestHandler)
+	ncs, _ := NewSession(context.Background(), tr, defaultConfig)
+	defer ncs.Close()
+
+	// Close the transport - to force error.
+	tr.Close()
+	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	assert.Error(t, err, "Expecting exec to fail")
+	assert.Equal(t, "EOF", err.Error(), "Expected EOF error")
+	assert.Nil(t, reply, "Reply should be nil")
+}
 
 func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
 
-	ncServer := newHandler(t, 4).withCapabilities([]string{CapBase10})
+	ncServer := newSessionHandler(t, 4).withCapabilities([]string{CapBase10})
 	tr := getSSHTransport(t, ncServer)
 
 	ncs, err := NewSession(WithClientTrace(context.Background(), DiagnosticLoggingHooks), tr, defaultConfig)
@@ -245,7 +259,7 @@ func notificationEvent() string {
 }
 
 func testNetconfServer(t assert.TestingT) (*netconfSessionHandler, Transport) {
-	server := newHandler(t, 4)
+	server := newSessionHandler(t, 4)
 	tr := getSSHTransport(t, server)
 	return server, tr
 }

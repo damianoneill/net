@@ -98,6 +98,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 	// Send hello
 	err := si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
 	if err != nil {
+		si.traceError("Failed to encode hello", err)
 		si.Close()
 		return nil, err
 	}
@@ -107,6 +108,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 
 	err = si.waitForServerHello()
 	if err != nil {
+		si.traceError("Failed to receive hello", err)
 		si.Close()
 		return nil, err
 	}

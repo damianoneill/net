@@ -37,7 +37,7 @@ func TestSessionSetupFailure(t *testing.T) {
 
 func TestSessionSetupSuccess(t *testing.T) {
 
-	handler := newHandler(t, 4)
+	handler := newSessionHandler(t, 4)
 	ts := testutil.NewSSHServerHandler(t, "testUser", "testPassword", handler)
 	defer ts.Close()
 

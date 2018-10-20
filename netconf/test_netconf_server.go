@@ -96,7 +96,7 @@ type netconfSessionHandler struct {
 	reqCount int
 }
 
-func newHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &netconfSessionHandler{t: t,
