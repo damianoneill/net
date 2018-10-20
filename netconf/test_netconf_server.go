@@ -13,48 +13,54 @@ var (
 	nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
 )
 
-type RPCRequest struct {
+type rpcRequest struct {
 	XMLName xml.Name
 	Body    string `xml:",innerxml"`
 }
 
-// RPCRequestMessage defines the request sent to the server.
-type RPCRequestMessage struct {
+type rpcRequestMessage struct {
 	XMLName   xml.Name   //`xml:"rpc"`
 	MessageID string     `xml:"message-id,attr"`
-	Request   RPCRequest `xml:",any"`
+	Request   rpcRequest `xml:",any"`
 }
 
-type ReplyData struct {
+type replyData struct {
 	XMLName xml.Name `xml:"data"`
 	Data    string   `xml:",innerxml"`
 }
 
+// RPCReplyMessage defines the contents of an rpc-reply message that will be sent to a client session.
 type RPCReplyMessage struct {
 	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
 	Errors    []RPCError `xml:"rpc-error,omitempty"`
-	Data      ReplyData  `xml:"data"`
+	Data      replyData  `xml:"data"`
 	Ok        bool       `xml:",omitempty"`
 	RawReply  string     `xml:"-"`
 	MessageID string     `xml:"message-id,attr"`
 }
 
+// NotifyMessage defines the contents of a notification message that will be sent to a client session.
 type NotifyMessage struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:notification:1.0 notification"`
 	EventTime string   `xml:"eventTime"`
 	Data      string   `xml:",innerxml"`
 }
 
-type RequestHandler func(h *netconfSessionHandler, req *RPCRequestMessage)
+// RequestHandler is a function type that will be invoked by a test server to handle an RPC
+// request.
+type RequestHandler func(h *netconfSessionHandler, req *rpcRequestMessage)
 
-var DefaultRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessage) {
-	data := ReplyData{Data: req.Request.Body}
+// EchoRequestHandler responds to a request with a reply containing a data element holding
+// the body of the request.
+var EchoRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
+	data := replyData{Data: req.Request.Body}
 	reply := &RPCReplyMessage{Data: data, MessageID: req.MessageID}
 	err := h.enc.encode(reply)
 	assert.NoError(h.t, err, "Failed to encode response")
 }
 
-var FailingRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessage) {
+// FailingRequestHandler replies to a request with an error.
+var FailingRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
 	reply := &RPCReplyMessage{
 		MessageID: req.MessageID,
 		Errors: []RPCError{
@@ -64,13 +70,13 @@ var FailingRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessag
 	assert.NoError(h.t, err, "Failed to encode response")
 }
 
-var CloseRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessage) {
-	h.ch.Close()
+// CloseRequestHandler closes the transport channel on request receipt.
+var CloseRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
+	h.ch.Close() // nolint: errcheck, gosec
 }
 
-var IgnoreRequestHandler = func(h *netconfSessionHandler, req *RPCRequestMessage) {
-
-}
+// IgnoreRequestHandler does in nothing on receipt of a request.
+var IgnoreRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {}
 
 type netconfSessionHandler struct {
 	t   assert.TestingT
@@ -90,7 +96,7 @@ type netconfSessionHandler struct {
 	reqCount int
 }
 
-func newHandler(t assert.TestingT, sid int) *netconfSessionHandler {
+func newHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &netconfSessionHandler{t: t,
@@ -145,10 +151,10 @@ func (h *netconfSessionHandler) sendNotification(n string) *netconfSessionHandle
 }
 
 func (h *netconfSessionHandler) close() {
-	h.ch.Close()
+	h.ch.Close() // nolint: errcheck, gosec
 }
 
-func (h *netconfSessionHandler) waitForClientHello() (err error) {
+func (h *netconfSessionHandler) waitForClientHello() {
 
 	// Wait for the input handler to send the client hello.
 	select {
@@ -157,8 +163,6 @@ func (h *netconfSessionHandler) waitForClientHello() (err error) {
 	}
 
 	assert.NotNil(h.t, h.clientHello, "Failed to get client hello")
-
-	return
 }
 
 func (h *netconfSessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
@@ -188,7 +192,6 @@ func (h *netconfSessionHandler) handleToken(token xml.Token) {
 		default:
 		}
 	}
-	return
 }
 
 func (h *netconfSessionHandler) handleHello(token xml.StartElement) {
@@ -206,7 +209,7 @@ func (h *netconfSessionHandler) handleHello(token xml.StartElement) {
 }
 
 func (h *netconfSessionHandler) handleRPC(token xml.StartElement) {
-	request := &RPCRequestMessage{}
+	request := &rpcRequestMessage{}
 	h.decodeElement(&request, &token)
 
 	h.reqCount++
@@ -222,7 +225,7 @@ func (h *netconfSessionHandler) decodeElement(v interface{}, start *xml.StartEle
 func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
 	l := len(h.reqHandlers)
 	if l == 0 {
-		reqh = DefaultRequestHandler
+		reqh = EchoRequestHandler
 	} else {
 		h.reqHandlers, reqh = h.reqHandlers[1:], h.reqHandlers[0]
 	}
