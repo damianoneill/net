@@ -35,6 +35,10 @@
   name = "golang.org/x/crypto"
 
 [[constraint]]
+  name = "github.com/imdario/mergo"
+  version = "0.3.6" 
+
+[[constraint]]
   name = "github.com/satori/go.uuid"
   version = "1.2.0" 
 

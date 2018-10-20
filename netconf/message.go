@@ -98,7 +98,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 	// Send hello
 	err := si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
 	if err != nil {
-		si.traceError("Failed to encode hello", err)
+		si.trace.Error("Failed to encode hello", err)
 		si.Close()
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 
 	err = si.waitForServerHello()
 	if err != nil {
-		si.traceError("Failed to receive hello", err)
+		si.trace.Error("Failed to receive hello", err)
 		si.Close()
 		return nil, err
 	}
@@ -117,16 +117,11 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 
 func (si *sesImpl) Execute(req Request) (reply *RPCReply, err error) {
 
-	if si.trace != nil {
-		if si.trace.ExecuteStart != nil {
-			si.trace.ExecuteStart(req, false)
-		}
-		if si.trace.ExecuteDone != nil {
-			defer func(begin time.Time) {
-				si.trace.ExecuteDone(req, false, reply, err, time.Since(begin))
-			}(time.Now())
-		}
-	}
+	si.trace.ExecuteStart(req, false)
+
+	defer func(begin time.Time) {
+		si.trace.ExecuteDone(req, false, reply, err, time.Since(begin))
+	}(time.Now())
 
 	// Allocate a response channel
 	rchan := si.allocChan()
@@ -146,16 +141,12 @@ func (si *sesImpl) Execute(req Request) (reply *RPCReply, err error) {
 }
 
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
-	if si.trace != nil {
-		if si.trace.ExecuteStart != nil {
-			si.trace.ExecuteStart(req, true)
-		}
-		if si.trace.ExecuteDone != nil {
-			defer func(begin time.Time) {
-				si.trace.ExecuteDone(req, true, nil, err, time.Since(begin))
-			}(time.Now())
-		}
-	}
+
+	si.trace.ExecuteStart(req, true)
+	defer func(begin time.Time) {
+		si.trace.ExecuteDone(req, true, nil, err, time.Since(begin))
+	}(time.Now())
+
 	return si.execute(req, rchan)
 }
 
@@ -186,7 +177,7 @@ func (si *sesImpl) Subscribe(req Request, nchan chan *Notification) (reply *RPCR
 func (si *sesImpl) Close() {
 	err := si.t.Close()
 	if err != nil {
-		si.traceError("Session close failed", err)
+		si.trace.Error("Session close failed", err)
 	}
 }
 
@@ -291,16 +282,14 @@ func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
 	// Send notification to subscription channel, if it's defined and not full.
 	if si.subchan != nil {
 		notification := buildNotification(result)
-		if si.trace != nil && si.trace.NotificationReceived != nil {
-			si.trace.NotificationReceived(notification)
-		}
+
+		si.trace.NotificationReceived(notification)
+
 		select {
 		case si.subchan <- notification:
 		default:
 			si.notificationDropCount++
-			if si.trace != nil && si.trace.NotificationDropped != nil {
-				si.trace.NotificationDropped(notification)
-			}
+			si.trace.NotificationDropped(notification)
 		}
 	}
 	return
@@ -315,7 +304,7 @@ func buildNotification(nmsg *NotificationMessage) *Notification {
 
 func (si *sesImpl) decodeElement(v interface{}, start *xml.StartElement) (err error) {
 	if err = si.dec.DecodeElement(v, start); err != nil {
-		si.traceError(fmt.Sprintf("DecodeElement token:%s", start.Name.Local), err)
+		si.trace.Error(fmt.Sprintf("DecodeElement token:%s", start.Name.Local), err)
 	}
 	return
 }
@@ -387,10 +376,4 @@ func mapError(r *RPCReply) (err error) {
 		}
 	}
 	return
-}
-
-func (si *sesImpl) traceError(context string, err error) {
-	if si.trace != nil && si.trace.Error != nil {
-		si.trace.Error(context, err)
-	}
 }

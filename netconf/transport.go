@@ -33,15 +33,12 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 
 	var impl tImpl
 	impl.trace = ContextClientTrace(ctx)
-	if impl.trace != nil {
-		if impl.trace.ConnectStart != nil {
-			impl.trace.ConnectStart(clientConfig, target)
-		}
-		if impl.trace.ConnectDone != nil {
-			begin := time.Now()
-			defer impl.trace.ConnectDone(clientConfig, target, err, time.Since(begin))
-		}
-	}
+
+	impl.trace.ConnectStart(clientConfig, target)
+
+	defer func(begin time.Time) {
+		impl.trace.ConnectDone(clientConfig, target, err, time.Since(begin))
+	}(time.Now())
 
 	defer func() {
 		// nolint: gosec, errcheck
@@ -76,14 +73,8 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 		return
 	}
 
-	if impl.trace != nil {
-		if impl.trace.ReadDone != nil || impl.trace.ReadStart != nil {
-			impl.injectTraceReader()
-		}
-		if impl.trace.WriteStart != nil || impl.trace.WriteDone != nil {
-			impl.injectTraceWriter()
-		}
-	}
+	impl.injectTraceReader()
+	impl.injectTraceWriter()
 
 	rt = &impl
 	return
@@ -106,9 +97,7 @@ func (t *tImpl) Write(p []byte) (n int, err error) {
 // Errors are returned with priority matching the same order.
 func (t *tImpl) Close() (err error) {
 
-	if t.trace != nil && t.trace.ConnectionClosed != nil {
-		defer t.trace.ConnectionClosed(err)
-	}
+	defer t.trace.ConnectionClosed(err)
 
 	var (
 		writeCloseErr      error
@@ -149,14 +138,11 @@ func (t *tImpl) injectTraceReader() {
 
 func (tr *traceReader) Read(p []byte) (c int, err error) {
 
-	if tr.trace.ReadStart != nil {
-		tr.trace.ReadStart(p)
-	}
-	if tr.trace.ReadDone != nil {
-		defer func(begin time.Time) {
-			tr.trace.ReadDone(p, c, err, time.Since(begin))
-		}(time.Now())
-	}
+	tr.trace.ReadStart(p)
+	defer func(begin time.Time) {
+		tr.trace.ReadDone(p, c, err, time.Since(begin))
+	}(time.Now())
+
 	c, err = tr.r.Read(p)
 
 	return
@@ -172,14 +158,11 @@ func (t *tImpl) injectTraceWriter() {
 }
 
 func (tw *traceWriter) Write(p []byte) (c int, err error) {
-	if tw.trace.WriteStart != nil {
-		tw.trace.WriteStart(p)
-	}
-	if tw.trace.WriteDone != nil {
-		defer func(begin time.Time) {
-			tw.trace.WriteDone(p, c, err, time.Since(begin))
-		}(time.Now())
-	}
+	tw.trace.WriteStart(p)
+	defer func(begin time.Time) {
+		tw.trace.WriteDone(p, c, err, time.Since(begin))
+	}(time.Now())
+
 	c, err = tw.w.Write(p)
 
 	return

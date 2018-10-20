@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/imdario/mergo"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -15,6 +16,11 @@ type clientEventContextKey struct{}
 // provided context. If none, it returns nil.
 func ContextClientTrace(ctx context.Context) *ClientTrace {
 	trace, _ := ctx.Value(clientEventContextKey{}).(*ClientTrace)
+	if trace == nil {
+		trace = NoOpLoggingHooks
+	} else {
+		mergo.Merge(trace, NoOpLoggingHooks)
+	}
 	return trace
 }
 
@@ -71,14 +77,14 @@ type ClientTrace struct {
 	ExecuteDone func(req Request, async bool, res *RPCReply, err error, d time.Duration)
 }
 
-// DefaultLoggingHooks provides a default logging hook
+// DefaultLoggingHooks provides a default logging hook to report errors.
 var DefaultLoggingHooks = &ClientTrace{
 	Error: func(context string, err error) {
 		log.Printf("Error context:%s err:%v\n", context, err)
 	},
 }
 
-// DiagnosticLoggingHooks provides a default diagnostic hook
+// DiagnosticLoggingHooks provides a set of default diagnostic hooks
 var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
 		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
@@ -117,4 +123,23 @@ var DiagnosticLoggingHooks = &ClientTrace{
 	ExecuteDone: func(req Request, async bool, res *RPCReply, err error, d time.Duration) {
 		log.Printf("ExecuteDone async:%v req:%s err:%v took:%dns\n", async, req, err, d)
 	},
+}
+
+// NoOpLoggingHooks provides set of hooks that do nothing.
+var NoOpLoggingHooks = &ClientTrace{
+	ConnectStart:     func(clientConfig *ssh.ClientConfig, target string) {},
+	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
+	ConnectionClosed: func(err error) {},
+
+	ReadStart: func(p []byte) {},
+	ReadDone:  func(p []byte, c int, err error, d time.Duration) {},
+
+	WriteStart: func(p []byte) {},
+	WriteDone:  func(p []byte, c int, err error, d time.Duration) {},
+
+	Error:                func(context string, err error) {},
+	NotificationReceived: func(n *Notification) {},
+	NotificationDropped:  func(n *Notification) {},
+	ExecuteStart:         func(req Request, async bool) {},
+	ExecuteDone:          func(req Request, async bool, res *RPCReply, err error, d time.Duration) {},
 }
