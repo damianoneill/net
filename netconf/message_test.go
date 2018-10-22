@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -159,7 +160,7 @@ func TestSubscribe(t *testing.T) {
 	ts.SendNotification(notificationEvent())
 	ts.SendNotification(notificationEvent())
 	time.Sleep(time.Millisecond * time.Duration(500))
-	assert.Equal(t, 2, ncs.(*sesImpl).notificationDropCount, "Expected notification to have been dropped")
+	assert.Equal(t, uint64(2), atomic.LoadUint64(&(ncs.(*sesImpl).notificationDropCount)), "Expected notification to have been dropped")
 
 	ts.Close()
 	result = <-nch

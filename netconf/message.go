@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/satori/go.uuid"
@@ -58,7 +59,7 @@ type sesImpl struct {
 	pchLock sync.Mutex
 	rchLock sync.Mutex
 
-	notificationDropCount int
+	notificationDropCount uint64
 }
 
 // DefaultCapabilities sets the default capabilities of the client library
@@ -238,6 +239,7 @@ func (si *sesImpl) handleToken(token xml.Token) (err error) {
 
 		default:
 		}
+	default:
 	}
 	return
 }
@@ -288,7 +290,7 @@ func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
 		select {
 		case si.subchan <- notification:
 		default:
-			si.notificationDropCount++
+			atomic.AddUint64(&si.notificationDropCount, 1)
 			si.trace.NotificationDropped(notification)
 		}
 	}
