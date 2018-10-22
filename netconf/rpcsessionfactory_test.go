@@ -10,8 +10,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Simple real NE access tests
-
 func TestTransportFailure(t *testing.T) {
 
 	s, err := NewRPCSession(context.Background(), &ssh.ClientConfig{}, "localhost:0")
@@ -21,12 +19,12 @@ func TestTransportFailure(t *testing.T) {
 
 func TestSessionSetupFailure(t *testing.T) {
 
-	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
+	ts := testutil.NewSSHServer(t, TestUserName, TestPassword)
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
-		User:            "testUser",
-		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
+		User:            TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -37,13 +35,11 @@ func TestSessionSetupFailure(t *testing.T) {
 
 func TestSessionSetupSuccess(t *testing.T) {
 
-	handler := newSessionHandler(t, 4)
-	ts := testutil.NewSSHServerHandler(t, "testUser", "testPassword", handler)
-	defer ts.Close()
+	ts := NewTestNetconfServer(t)
 
 	sshConfig := &ssh.ClientConfig{
-		User:            "testUser",
-		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
+		User:            TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 

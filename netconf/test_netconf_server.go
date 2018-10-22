@@ -1,248 +1,75 @@
 package netconf
 
 import (
-	"encoding/xml"
-	"sync"
-	"time"
+	"fmt"
+	"runtime"
 
+	"github.com/damianoneill/net/testutil"
 	assert "github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ssh"
 )
 
-var (
-	nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
+const (
+	TestUserName = "testUser"
+	TestPassword = "testPassword"
 )
 
-type rpcRequest struct {
-	XMLName xml.Name
-	Body    string `xml:",innerxml"`
+// TestNCServer represents a Netconf Server that can be used for 'on-board' testing.
+// It encapsulates a transport connection to an SSH server, and a netconf session handler that will
+// be invoked to handle netconf messages.
+type TestNCServer struct {
+	*testutil.SSHServer
+	*netconfSessionHandler
 }
 
-type rpcRequestMessage struct {
-	XMLName   xml.Name   //`xml:"rpc"`
-	MessageID string     `xml:"message-id,attr"`
-	Request   rpcRequest `xml:",any"`
-}
+// Create a new TestNCServer that will accept Netconf localhost connections on an ephemeral port (available
+// via Port(), with credentials defined by TestUserName and TestPassword.
+// tctx will be used for handling failures; if the supplied value is nil, a default test context will be used.
+// The behaviour of the Netconf session handler can be conifgured using the WithCapabilities and
+// WithRequestHandler methods.
+func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 
-type replyData struct {
-	XMLName xml.Name `xml:"data"`
-	Data    string   `xml:",innerxml"`
-}
+	ncs := &TestNCServer{}
 
-// RPCReplyMessage defines the contents of an rpc-reply message that will be sent to a client session.
-type RPCReplyMessage struct {
-	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
-	Errors    []RPCError `xml:"rpc-error,omitempty"`
-	Data      replyData  `xml:"data"`
-	Ok        bool       `xml:",omitempty"`
-	RawReply  string     `xml:"-"`
-	MessageID string     `xml:"message-id,attr"`
-}
+	ncs.netconfSessionHandler = newSessionHandler(ncs, 4)
 
-// NotifyMessage defines the contents of a notification message that will be sent to a client session.
-type NotifyMessage struct {
-	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:notification:1.0 notification"`
-	EventTime string   `xml:"eventTime"`
-	Data      string   `xml:",innerxml"`
-}
-
-// RequestHandler is a function type that will be invoked by a test server to handle an RPC
-// request.
-type RequestHandler func(h *netconfSessionHandler, req *rpcRequestMessage)
-
-// EchoRequestHandler responds to a request with a reply containing a data element holding
-// the body of the request.
-var EchoRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
-	data := replyData{Data: req.Request.Body}
-	reply := &RPCReplyMessage{Data: data, MessageID: req.MessageID}
-	err := h.enc.encode(reply)
-	assert.NoError(h.t, err, "Failed to encode response")
-}
-
-// FailingRequestHandler replies to a request with an error.
-var FailingRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
-	reply := &RPCReplyMessage{
-		MessageID: req.MessageID,
-		Errors: []RPCError{
-			RPCError{Severity: "error", Message: "oops"}},
+	if tctx == nil {
+		// Default test context to built-in implementation.
+		tctx = ncs
 	}
-	err := h.enc.encode(reply)
-	assert.NoError(h.t, err, "Failed to encode response")
+	ncs.SSHServer = testutil.NewSSHServerHandler(tctx, TestUserName, TestPassword, ncs.netconfSessionHandler)
+
+	return ncs
 }
 
-// CloseRequestHandler closes the transport channel on request receipt.
-var CloseRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
-	h.ch.Close() // nolint: errcheck, gosec
+// WithRequestHandler adds a request handler to the netconf session.
+func (ncs *TestNCServer) WithRequestHandler(rh RequestHandler) *TestNCServer {
+	ncs.netconfSessionHandler.reqHandlers = append(ncs.netconfSessionHandler.reqHandlers, rh)
+	return ncs
 }
 
-// IgnoreRequestHandler does in nothing on receipt of a request.
-var IgnoreRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {}
-
-type netconfSessionHandler struct {
-	t   assert.TestingT
-	ch  ssh.Channel
-	enc *encoder
-	dec *decoder
-
-	capabilities []string
-	hellochan    chan bool
-	clientHello  *HelloMessage
-	sid          int
-
-	startwg *sync.WaitGroup
-
-	reqHandlers []RequestHandler
-
-	reqCount int
+// WithCapabilities define the capabilities that the server will advertise when a netconf client connects.
+func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
+	ncs.netconfSessionHandler.capabilities = caps
+	return ncs
 }
 
-func newSessionHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	return &netconfSessionHandler{t: t,
-		sid:          sid,
-		hellochan:    make(chan bool),
-		startwg:      wg,
-		capabilities: DefaultCapabilities}
-}
-
-func (h *netconfSessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
-	h.ch = ch
-	h.dec = newDecoder(ch)
-	h.enc = newEncoder(ch)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
-	// Send server hello to client.
-	err := h.enc.encode(&HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
-	assert.NoError(h.t, err, "Failed to send server hello")
-
-	go h.handleIncomingMessages(wg)
-
-	h.waitForClientHello()
-
-	// Signal server has completed setup
-	h.startwg.Done()
-
-	// Wait for message handling routine to finish.
-	wg.Wait()
-}
-
-func (h *netconfSessionHandler) waitStart() {
-	h.startwg.Wait()
-}
-
-func (h *netconfSessionHandler) withRequestHandler(rh RequestHandler) *netconfSessionHandler {
-	h.reqHandlers = append(h.reqHandlers, rh)
-	return h
-}
-
-func (h *netconfSessionHandler) withCapabilities(caps []string) *netconfSessionHandler {
-	h.capabilities = caps
-	return h
-}
-
-func (h *netconfSessionHandler) sendNotification(n string) *netconfSessionHandler {
-	nm := &NotifyMessage{EventTime: time.Now().String(), Data: n}
-	err := h.enc.encode(nm)
-	assert.NoError(h.t, err, "Failed to send server notification")
-	return h
-}
-
-func (h *netconfSessionHandler) close() {
-	h.ch.Close() // nolint: errcheck, gosec
-}
-
-func (h *netconfSessionHandler) waitForClientHello() {
-
-	// Wait for the input handler to send the client hello.
-	select {
-	case <-h.hellochan:
-	case <-time.After(time.Duration(5) * time.Second):
+// Close closes any active transport to the test server and prevents subsequent connections.
+func (ncs *TestNCServer) Close() {
+	if ncs.netconfSessionHandler.ch != nil {
+		ncs.netconfSessionHandler.ch.Close()
+		ncs.netconfSessionHandler.ch = nil
 	}
-
-	assert.NotNil(h.t, h.clientHello, "Failed to get client hello")
+	ncs.SSHServer.Close()
 }
 
-func (h *netconfSessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
-
-	defer wg.Done()
-
-	// Loop, looking for a start element type of hello, rpc-reply.
-	for {
-		token, err := h.dec.Token()
-		if err != nil {
-			break
-		}
-		h.handleToken(token)
-	}
+// Errorf provides testing.T compatibility if a test context is not provided when the test server is
+// created.
+func (ncs *TestNCServer) Errorf(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
 }
 
-func (h *netconfSessionHandler) handleToken(token xml.Token) {
-	switch token := token.(type) {
-	case xml.StartElement:
-		switch token.Name {
-		case nameHello: // <hello>
-			h.handleHello(token)
-
-		case nameRPC: // <rpc>
-			h.handleRPC(token)
-
-		default:
-		}
-	}
+// FailNow provides testing.T compatibility if a test context is not provided when the test server is
+// created.
+func (ncs *TestNCServer) FailNow() {
+	runtime.Goexit()
 }
-
-func (h *netconfSessionHandler) handleHello(token xml.StartElement) {
-	// Decode the hello element and send it down the channel to trigger the rest of the session setup.
-
-	h.decodeElement(&h.clientHello, &token)
-
-	if peerSupportsChunkedFraming(h.clientHello.Capabilities) && peerSupportsChunkedFraming(h.capabilities) {
-
-		// Update the codec to use chunked framing from now.
-		enableChunkedFraming(h.dec, h.enc)
-	}
-
-	h.hellochan <- true
-}
-
-func (h *netconfSessionHandler) handleRPC(token xml.StartElement) {
-	request := &rpcRequestMessage{}
-	h.decodeElement(&request, &token)
-
-	h.reqCount++
-	reqh := h.nextReqHandler()
-	reqh(h, request)
-}
-
-func (h *netconfSessionHandler) decodeElement(v interface{}, start *xml.StartElement) {
-	err := h.dec.DecodeElement(v, start)
-	assert.NoError(h.t, err, "DecodeElement failed")
-}
-
-func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
-	l := len(h.reqHandlers)
-	if l == 0 {
-		reqh = EchoRequestHandler
-	} else {
-		h.reqHandlers, reqh = h.reqHandlers[1:], h.reqHandlers[0]
-	}
-	return
-}
-
-// type diagReader struct {
-// 	r io.Reader
-// }
-
-// func (dr *diagReader) Read(p []byte) (int, error) {
-// 	fmt.Printf("Server ReadStart %d\n", len(p))
-// 	c, err := dr.r.Read(p)
-// 	fmt.Printf("Server ReadDone %d %v %s\n", c, err, string(p[:c]))
-// 	return c, err
-// }
-
-// func injectDiagReader(r io.Reader) io.Reader {
-// 	return &diagReader{r: r}
-// }
