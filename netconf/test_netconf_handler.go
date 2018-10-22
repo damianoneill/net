@@ -48,23 +48,20 @@ type netconfSessionHandler struct {
 	ReqCount int
 }
 
-type rpcRequest struct {
-	XMLName xml.Name
-	Body    string `xml:",innerxml"`
-}
-
+// rpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
+// request body is unknown.
 type rpcRequestMessage struct {
 	XMLName   xml.Name   //`xml:"rpc"`
 	MessageID string     `xml:"message-id,attr"`
 	Request   rpcRequest `xml:",any"`
 }
-
-type replyData struct {
-	XMLName xml.Name `xml:"data"`
-	Data    string   `xml:",innerxml"`
+type rpcRequest struct {
+	XMLName xml.Name
+	Body    string `xml:",innerxml"`
 }
 
-// RPCReplyMessage defines the contents of an rpc-reply message that will be sent to a client session.
+// RPCReplyMessage  and replyData represent an rpc-reply message that will be sent to a client session, where the
+// element type of the reply body (i.e. the content of the data element) is unknown.
 type RPCReplyMessage struct {
 	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
 	Errors    []RPCError `xml:"rpc-error,omitempty"`
@@ -73,8 +70,13 @@ type RPCReplyMessage struct {
 	RawReply  string     `xml:"-"`
 	MessageID string     `xml:"message-id,attr"`
 }
+type replyData struct {
+	XMLName xml.Name `xml:"data"`
+	Data    string   `xml:",innerxml"`
+}
 
-// NotifyMessage defines the contents of a notification message that will be sent to a client session.
+// NotifyMessage defines the contents of a notification message that will be sent to a client session, where the
+// element type of the notification event is unknown.
 type NotifyMessage struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:notification:1.0 notification"`
 	EventTime string   `xml:"eventTime"`
@@ -201,6 +203,7 @@ func (h *netconfSessionHandler) handleToken(token xml.Token) {
 
 		default:
 		}
+	default:
 	}
 }
 
