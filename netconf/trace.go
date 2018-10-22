@@ -3,9 +3,9 @@ package netconf
 import (
 	"context"
 	"log"
-	"reflect"
 	"time"
 
+	"github.com/imdario/mergo"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -16,20 +16,21 @@ type clientEventContextKey struct{}
 // provided context. If none, it returns nil.
 func ContextClientTrace(ctx context.Context) *ClientTrace {
 	trace, _ := ctx.Value(clientEventContextKey{}).(*ClientTrace)
+	if trace == nil {
+		trace = NoOpLoggingHooks
+	} else {
+		mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+	}
 	return trace
 }
 
 // WithClientTrace returns a new context based on the provided parent
 // ctx. Netconf client requests made with the returned context will use
-// the provided trace hooks, in addition to any previous hooks
-// registered with ctx. Any hooks defined in the provided trace will
-// be called first.
+// the provided trace hooks
 func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
-	if trace == nil {
-		panic("nil trace")
-	}
-	old := ContextClientTrace(ctx)
-	trace.compose(old)
+
+	// old := ContextClientTrace(ctx)
+	// trace.compose(old)
 
 	ctx = context.WithValue(ctx, clientEventContextKey{}, trace)
 	return ctx
@@ -76,51 +77,14 @@ type ClientTrace struct {
 	ExecuteDone func(req Request, async bool, res *RPCReply, err error, d time.Duration)
 }
 
-// compose modifies t such that it respects the previously-registered hooks in old,
-// subject to the composition policy requested in t.Compose.
-func (t *ClientTrace) compose(old *ClientTrace) {
-	if old == nil {
-		return
-	}
-	tv := reflect.ValueOf(t).Elem()
-	ov := reflect.ValueOf(old).Elem()
-	structType := tv.Type()
-	for i := 0; i < structType.NumField(); i++ {
-		tf := tv.Field(i)
-		hookType := tf.Type()
-		if hookType.Kind() != reflect.Func {
-			continue
-		}
-		of := ov.Field(i)
-		if of.IsNil() {
-			continue
-		}
-		if tf.IsNil() {
-			tf.Set(of)
-			continue
-		}
-
-		// Make a copy of tf for tf to call. (Otherwise it
-		// creates a recursive call cycle and stack overflows)
-		tfCopy := reflect.ValueOf(tf.Interface())
-
-		// We need to call both tf and of in some order.
-		newFunc := reflect.MakeFunc(hookType, func(args []reflect.Value) []reflect.Value {
-			tfCopy.Call(args)
-			return of.Call(args)
-		})
-		tv.Field(i).Set(newFunc)
-	}
-}
-
-// DefaultLoggingHooks provides a default logging hook
+// DefaultLoggingHooks provides a default logging hook to report errors.
 var DefaultLoggingHooks = &ClientTrace{
 	Error: func(context string, err error) {
 		log.Printf("Error context:%s err:%v\n", context, err)
 	},
 }
 
-// DiagnosticLoggingHooks provides a default diagnostic hook
+// DiagnosticLoggingHooks provides a set of default diagnostic hooks
 var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
 		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
@@ -159,4 +123,23 @@ var DiagnosticLoggingHooks = &ClientTrace{
 	ExecuteDone: func(req Request, async bool, res *RPCReply, err error, d time.Duration) {
 		log.Printf("ExecuteDone async:%v req:%s err:%v took:%dns\n", async, req, err, d)
 	},
+}
+
+// NoOpLoggingHooks provides set of hooks that do nothing.
+var NoOpLoggingHooks = &ClientTrace{
+	ConnectStart:     func(clientConfig *ssh.ClientConfig, target string) {},
+	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
+	ConnectionClosed: func(err error) {},
+
+	ReadStart: func(p []byte) {},
+	ReadDone:  func(p []byte, c int, err error, d time.Duration) {},
+
+	WriteStart: func(p []byte) {},
+	WriteDone:  func(p []byte, c int, err error, d time.Duration) {},
+
+	Error:                func(context string, err error) {},
+	NotificationReceived: func(n *Notification) {},
+	NotificationDropped:  func(n *Notification) {},
+	ExecuteStart:         func(req Request, async bool) {},
+	ExecuteDone:          func(req Request, async bool, res *RPCReply, err error, d time.Duration) {},
 }

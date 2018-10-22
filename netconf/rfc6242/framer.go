@@ -140,6 +140,7 @@ func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte
 					"impossible default switch case: action=%v adv=%v chunksize=%v cherr=%v",
 					action, adv, chunksize, cherr))
 			}
+		default:
 		}
 
 		// consume any chunk data available

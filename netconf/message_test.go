@@ -2,61 +2,35 @@ package netconf
 
 import (
 	"context"
-	"encoding/xml"
 	"fmt"
-	"io"
-	"regexp"
-	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	mocks "github.com/damianoneill/net/netconf/mocks"
-	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
-
-const (
-	endOfMessage = `]]>]]>`
-)
-
-func TestNewSession(t *testing.T) {
-
-	ms := newMockServer()
-	ms.closeConnection()
-
-	ncs, err := testSession(ms)
-
-	assert.NoError(t, err, "Not expecting new session to fail")
-	assert.NotNil(t, ncs, "Session should be non-nil")
-	assert.Equal(t, 4, ncs.ID(), "Session id not defined correctly")
-	assert.NotNil(t, ms.clientHello, "Should have received hello")
-	assert.Equal(t, ms.clientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
-
-	ncs.Close()
-}
 
 func TestNewSessionWithChunkedEncoding(t *testing.T) {
 
-	ms := newMockServerWithBase(CapBase11)
-	ms.closeConnection()
+	ts := NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
 
-	ncs, err := testSession(ms)
-
-	assert.NoError(t, err, "Not expecting new session to fail")
 	assert.NotNil(t, ncs, "Session should be non-nil")
-	assert.NotNil(t, ms.clientHello, "Should have received hello")
-	assert.Contains(t, ms.clientHello.Capabilities, CapBase11, "Did not send expected server capabilities")
+	assert.Equal(t, 4, ncs.ID(), "Session id not defined correctly")
+
+	ts.WaitStart()
+	assert.NotNil(t, ts.ClientHello, "Should have sent hello")
+	assert.Equal(t, ts.ClientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
 
 	ncs.Close()
 }
 
 func TestExecute(t *testing.T) {
 
-	ms := newMockServer()
-	ms.replyToRequests()
-
-	ncs, _ := testSession(ms)
+	ncs := newNCClientSession(t, NewTestNetconfServer(t))
+	defer ncs.Close()
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
@@ -64,12 +38,50 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
 }
 
+func TestExecuteWithFailingRequest(t *testing.T) {
+
+	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(FailingRequestHandler))
+	defer ncs.Close()
+
+	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	assert.Error(t, err, "Expecting exec to fail")
+	assert.Equal(t, "netconf rpc [error] 'oops'", err.Error(), "Expected error")
+	assert.NotNil(t, reply, "Reply should be non-nil")
+}
+
+func TestExecuteFailure(t *testing.T) {
+
+	ts := NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
+	defer ncs.Close()
+
+	// Close the transport - to force error when we try to use it.
+	ts.Close()
+	time.Sleep(time.Millisecond * time.Duration(250))
+
+	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	assert.Error(t, err, "Expecting exec to fail")
+	assert.Equal(t, "EOF", err.Error(), "Expected EOF error")
+	assert.Nil(t, reply, "Reply should be nil")
+}
+
+func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
+
+	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithCapabilities([]string{CapBase10}))
+
+	assert.False(t, peerSupportsChunkedFraming(ncs.(*sesImpl).hello.Capabilities), "Server not expected to support chunked framing")
+
+	reply, _ := ncs.Execute(Request(`<get><response/></get>`))
+	assert.NotNil(t, reply, "Reply should be non-nil")
+	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
+
+	ncs.Close()
+}
+
 func TestExecuteAsync(t *testing.T) {
 
-	ms := newMockServer()
-	ms.replyToRequests()
-
-	ncs, _ := testSession(ms)
+	ncs := newNCClientSession(t, NewTestNetconfServer(t))
+	defer ncs.Close()
 
 	rch1 := make(chan *RPCReply)
 	rch2 := make(chan *RPCReply)
@@ -79,19 +91,20 @@ func TestExecuteAsync(t *testing.T) {
 	ncs.ExecuteAsync(Request(`<get><test3/></get>`), rch3)
 
 	reply := <-rch3
+	assert.NotNil(t, reply, "Reply should not be nil")
 	assert.Equal(t, `<data><test3/></data>`, reply.Data, "Reply should contain response data")
 	reply = <-rch2
+	assert.NotNil(t, reply, "Reply should not be nil")
 	assert.Equal(t, `<data><test2/></data>`, reply.Data, "Reply should contain response data")
 	reply = <-rch1
+	assert.NotNil(t, reply, "Reply should not be nil")
 	assert.Equal(t, `<data><test1/></data>`, reply.Data, "Reply should contain response data")
 }
 
 func TestExecuteAsyncUnfulfilled(t *testing.T) {
 
-	ms := newMockServer()
-	ms.ignoreRequest()
-
-	ncs, _ := testSession(ms)
+	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(CloseRequestHandler))
+	defer ncs.Close()
 
 	rch1 := make(chan *RPCReply)
 	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
@@ -102,10 +115,8 @@ func TestExecuteAsyncUnfulfilled(t *testing.T) {
 
 func TestExecuteAsyncInterrupted(t *testing.T) {
 
-	ms := newMockServer()
-	ms.longRunningRequest()
-
-	ncs, _ := testSession(ms)
+	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(IgnoreRequestHandler))
+	defer ncs.Close()
 
 	rch1 := make(chan *RPCReply)
 	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
@@ -117,12 +128,8 @@ func TestExecuteAsyncInterrupted(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 
-	ms := newMockServer()
-	ms.replyToNRequests(1)
-	ms.sendMessage(notificationMessage())
-	ms.closeConnection()
-
-	ncs, _ := testSession(ms)
+	ts := NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
 
 	nch := make(chan *Notification)
 
@@ -136,27 +143,34 @@ func TestSubscribe(t *testing.T) {
 	}()
 
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
-
+	assert.NotNil(t, reply, "create-subscription failed")
 	assert.NotNil(t, reply.Data, "create-subscription failed")
+
+	ts.SendNotification(notificationEvent())
 
 	// Wait for notification.
 	wg.Wait()
 	assert.NotNil(t, result, "Expected notification")
 	assert.Equal(t, "netconf-session-start", result.XMLName.Local, "Unexpected event type")
 	assert.Equal(t, "urn:ietf:params:xml:ns:yang:ietf-netconf-notifications", result.XMLName.Space, "Unexpected event NS")
-	assert.Equal(t, "2018-10-10T09:23:07Z", result.EventTime, "Unexpected event time")
+	assert.NotNil(t, result.EventTime, "Unexpected nil event time")
 	assert.Equal(t, notificationEvent(), result.Event, "Unexpected event XML")
 
+	// Get server to send notifications, wait a while for them to arrive and confirm they've been dropped.
+	ts.SendNotification(notificationEvent())
+	ts.SendNotification(notificationEvent())
+	time.Sleep(time.Millisecond * time.Duration(500))
+	assert.Equal(t, uint64(2), atomic.LoadUint64(&(ncs.(*sesImpl).notificationDropCount)), "Expected notification to have been dropped")
+
+	ts.Close()
 	result = <-nch
 	assert.Nil(t, result, "No more notifications expected")
 }
 
 func TestConcurrentExecute(t *testing.T) {
 
-	ms := newMockServer()
-	ms.replyToRequests()
-
-	ncs, _ := testSession(ms)
+	ts := NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
 
 	var wg sync.WaitGroup
 	for r := 0; r < 10; r++ {
@@ -173,14 +187,13 @@ func TestConcurrentExecute(t *testing.T) {
 		}(r)
 	}
 	wg.Wait()
+	assert.Equal(t, 1000, ts.ReqCount, "Unexpected request count")
 }
 
 func TestConcurrentExecuteAsync(t *testing.T) {
 
-	ms := newMockServer()
-	ms.replyToRequests()
-
-	ncs, _ := testSession(ms)
+	ts := NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
 
 	var wg sync.WaitGroup
 	for r := 0; r < 10; r++ {
@@ -195,19 +208,19 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 				assert.NoError(t, err, "Not expecting exec to fail")
 				reply := <-rchan
 
+				assert.NotNil(t, reply, "Reply should not be nil")
 				assert.Equal(t, replybody, reply.Data, "Reply should contain response data")
 			}
 		}(r)
 	}
 	wg.Wait()
+
+	assert.Equal(t, 1000, ts.ReqCount, "Unexpected request count")
 }
 
 func BenchmarkExecute(b *testing.B) {
 
-	ms := newMockServer()
-	ms.replyToRequests()
-
-	ncs, _ := testSession(ms)
+	ncs := newNCClientSession(b, NewTestNetconfServer(b))
 
 	for n := 0; n < b.N; n++ {
 		ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
@@ -216,60 +229,13 @@ func BenchmarkExecute(b *testing.B) {
 
 func BenchmarkTemplateParallel(b *testing.B) {
 
-	ms := newMockServer()
-	ms.replyToRequests()
-
-	ncs, _ := testSession(ms)
+	ncs := newNCClientSession(b, NewTestNetconfServer(b))
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
 		}
 	})
-}
-
-func extractRequestBody(buf []byte) string {
-	re := regexp.MustCompile("<get>(.*)</get>")
-	matches := re.FindStringSubmatch(string(buf))
-	if len(matches) > 0 {
-		return matches[1]
-	}
-	return ""
-}
-
-func serverHelloWithBase(base string) string {
-	return `<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">` +
-		`<capabilities>` +
-		`<capability>` +
-		base +
-		`</capability>` +
-		`<capability>` +
-		`urn:ietf:params:netconf:capability:startup:1.0` +
-		`</capability>` +
-		`<capability>` +
-		`http://example.net/router/2.3/myfeature` +
-		`</capability>` +
-		`</capabilities>` +
-		`<session-id>4</session-id>` +
-		`</hello>`
-}
-
-func rpcReply(body string) string {
-	return ` <rpc-reply message-id="101"` +
-		`xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"` +
-		`xmlns:ex="http://example.net/content/1.0"` +
-		`ex:user-id="fred">` +
-		`<data>` +
-		body +
-		`</data>` +
-		`</rpc-reply>`
-}
-
-func notificationMessage() string {
-	return `<notification xmlns="urn:ietf:params:xml:ns:netconf:notification:1.0">` +
-		`<eventTime>2018-10-10T09:23:07Z</eventTime>` +
-		notificationEvent() +
-		`</notification>`
 }
 
 func notificationEvent() string {
@@ -280,107 +246,16 @@ func notificationEvent() string {
 		`</netconf-session-start>`
 }
 
-type mockServer struct {
-	transport   *mocks.Transport
-	clientHello HelloMessage
-	rwSynch     chan interface{}
-}
-
-func newMockServer() *mockServer {
-	return newMockServerWithBase(CapBase10)
-}
-
-func newMockServerWithBase(capbase string) *mockServer {
-	ms := &mockServer{transport: &mocks.Transport{}, rwSynch: make(chan interface{})}
-	ms.sendMessage(serverHelloWithBase(capbase)).Once()
-	ms.captureMessage(&ms.clientHello)
-	ms.transport.On("Close").Return(func() error {
-		close(ms.rwSynch)
-		return nil
-	})
-	return ms
-}
-
-func (ms *mockServer) sendMessage(msg string) *mock.Call {
-	return ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		i := []byte(msg + endOfMessage)
-		copy(buf, i)
-		return len(i)
-	}, nil).Once()
-}
-
-func (ms *mockServer) captureMessage(msg interface{}) {
-	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		xml.Unmarshal(buf, msg)
-		return len(buf)
-	}, nil).Once()
-	// Ignore the end of message delimiter.
-	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		return len(buf)
-	}, nil).Once()
-}
-
-func (ms *mockServer) replyToRequests() {
-	ms.replyToNRequests(0)
-}
-
-func (ms *mockServer) replyToNRequests(count int) {
-
-	call := ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		body := <-ms.rwSynch
-		i := []byte(rpcReply(body.(string)) + endOfMessage)
-		copy(buf, i)
-		return len(i)
-	}, nil)
-	if count > 0 {
-		call.Times(count)
+func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
+	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
+	sshConfig := &ssh.ClientConfig{
+		User:            TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-
-	call = ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		if !strings.Contains(string(buf), "]]>]]>") {
-			ms.rwSynch <- extractRequestBody(buf)
-		}
-		return len(buf)
-	}, nil)
-	if count > 0 {
-		call.Times(count * 2)
-	}
-}
-
-func (ms *mockServer) ignoreRequest() {
-	wcount := 0
-	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		<-ms.rwSynch
-		return 0
-	}, io.EOF)
-
-	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		if wcount == 0 {
-			ms.rwSynch <- true
-			wcount++
-		}
-		return len(buf)
-	}, nil).Twice()
-}
-
-func (ms *mockServer) longRunningRequest() {
-	ms.transport.On("Read", mock.Anything).Return(func(buf []byte) int {
-		<-ms.rwSynch
-		return 0
-	}, io.EOF)
-
-	ms.transport.On("Write", mock.Anything).Return(func(buf []byte) int {
-		// Do nothing - no reply.
-		return len(buf)
-	}, nil).Twice()
-}
-
-func (ms *mockServer) closeConnection() {
-	ms.transport.On("Read", mock.Anything).Return(0, io.EOF)
-}
-
-func testSession(ms *mockServer) (Session, error) {
-	return NewSession(context.Background(), ms.transport, defaultConfig)
+	s, err := NewRPCSession(context.Background(), sshConfig, serverAddress)
+	assert.NoError(t, err, "Failed to create session")
+	return s
 }
 
 // Simple real NE access tests
