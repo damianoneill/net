@@ -13,6 +13,41 @@ var (
 	nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
 )
 
+// netconfSessionHandler represents the server side of an active netconf SSH session.
+type netconfSessionHandler struct {
+	// t is the testing context used for handling unexpected errors.
+	t assert.TestingT
+
+	// ch is the underlying transport connection.
+	ch ssh.Channel
+
+	// The codecs used to handle client i/o
+	enc *encoder
+	dec *decoder
+
+	// The capabilities advertised to the client.
+	capabilities []string
+	// The session id to be reported to the client.
+	sid int
+
+	// Channel used to signal successful receipt of client capabilities.
+	hellochan chan bool
+
+	// The HelloMessage sent by the connecting client.
+	ClientHello *HelloMessage
+
+	// startwg will be signalled when the session is started (specifically after client
+	// capabilities have been received).
+	startwg *sync.WaitGroup
+
+	// The queue of handlers used to process incoming client requests.
+	// If the queue is empty, a request is processed by the EchoRequestHandler
+	reqHandlers []RequestHandler
+
+	// Counts the number of requests that have been received by the session.
+	ReqCount int
+}
+
 type rpcRequest struct {
 	XMLName xml.Name
 	Body    string `xml:",innerxml"`
@@ -46,7 +81,7 @@ type NotifyMessage struct {
 	Data      string   `xml:",innerxml"`
 }
 
-// RequestHandler is a function type that will be invoked by a test server to handle an RPC
+// RequestHandler is a function type that will be invoked by the session handler to handle an RPC
 // request.
 type RequestHandler func(h *netconfSessionHandler, req *rpcRequestMessage)
 
@@ -78,24 +113,6 @@ var CloseRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage)
 // IgnoreRequestHandler does in nothing on receipt of a request.
 var IgnoreRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {}
 
-type netconfSessionHandler struct {
-	t   assert.TestingT
-	ch  ssh.Channel
-	enc *encoder
-	dec *decoder
-
-	capabilities []string
-	hellochan    chan bool
-	ClientHello  *HelloMessage
-	sid          int
-
-	startwg *sync.WaitGroup
-
-	reqHandlers []RequestHandler
-
-	ReqCount int
-}
-
 func newSessionHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -106,6 +123,7 @@ func newSessionHandler(t assert.TestingT, sid int) *netconfSessionHandler { // n
 		capabilities: DefaultCapabilities}
 }
 
+// Handle establishes a Netconf server session on a newly-connected SSH channel.
 func (h *netconfSessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
 	h.ch = ch
 	h.dec = newDecoder(ch)
@@ -133,13 +151,15 @@ func (h *netconfSessionHandler) WaitStart() {
 	h.startwg.Wait()
 }
 
-func (h *netconfSessionHandler) SendNotification(n string) *netconfSessionHandler {
-	nm := &NotifyMessage{EventTime: time.Now().String(), Data: n}
+// SendNotification sends a notification message with the supplied body to the client.
+func (h *netconfSessionHandler) SendNotification(body string) *netconfSessionHandler {
+	nm := &NotifyMessage{EventTime: time.Now().String(), Data: body}
 	err := h.enc.encode(nm)
 	assert.NoError(h.t, err, "Failed to send server notification")
 	return h
 }
 
+// Close initiates session tear-down by closing the underlying transport channel.
 func (h *netconfSessionHandler) Close() {
 	h.ch.Close() // nolint: errcheck, gosec
 }
@@ -221,18 +241,3 @@ func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
 	}
 	return
 }
-
-// type diagReader struct {
-// 	r io.Reader
-// }
-
-// func (dr *diagReader) Read(p []byte) (int, error) {
-// 	fmt.Printf("Server ReadStart %d\n", len(p))
-// 	c, err := dr.r.Read(p)
-// 	fmt.Printf("Server ReadDone %d %v %s\n", c, err, string(p[:c]))
-// 	return c, err
-// }
-
-// func injectDiagReader(r io.Reader) io.Reader {
-// 	return &diagReader{r: r}
-// }
