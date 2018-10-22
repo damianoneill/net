@@ -8,6 +8,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
+// Defines credentials used for test sessions.
 const (
 	TestUserName = "testUser"
 	TestPassword = "testPassword"
@@ -21,7 +22,7 @@ type TestNCServer struct {
 	*netconfSessionHandler
 }
 
-// Create a new TestNCServer that will accept Netconf localhost connections on an ephemeral port (available
+// NewTestNetconfServer creates a new TestNCServer that will accept Netconf localhost connections on an ephemeral port (available
 // via Port(), with credentials defined by TestUserName and TestPassword.
 // tctx will be used for handling failures; if the supplied value is nil, a default test context will be used.
 // The behaviour of the Netconf session handler can be conifgured using the WithCapabilities and
@@ -56,7 +57,7 @@ func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
 // Close closes any active transport to the test server and prevents subsequent connections.
 func (ncs *TestNCServer) Close() {
 	if ncs.netconfSessionHandler.ch != nil {
-		ncs.netconfSessionHandler.ch.Close()
+		ncs.netconfSessionHandler.ch.Close() // nolint: gosec, errcheck
 		ncs.netconfSessionHandler.ch = nil
 	}
 	ncs.SSHServer.Close()

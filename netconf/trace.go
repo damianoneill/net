@@ -19,7 +19,7 @@ func ContextClientTrace(ctx context.Context) *ClientTrace {
 	if trace == nil {
 		trace = NoOpLoggingHooks
 	} else {
-		mergo.Merge(trace, NoOpLoggingHooks)
+		mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
 	}
 	return trace
 }
