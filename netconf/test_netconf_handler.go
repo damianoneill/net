@@ -25,6 +25,9 @@ type netconfSessionHandler struct {
 	enc *encoder
 	dec *decoder
 
+	// Serialises access to encoder (avoiding contention between sending notifications and request responses).
+	encLock sync.Mutex
+
 	// The capabilities advertised to the client.
 	capabilities []string
 	// The session id to be reported to the client.
@@ -92,7 +95,7 @@ type RequestHandler func(h *netconfSessionHandler, req *rpcRequestMessage)
 var EchoRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
 	data := replyData{Data: req.Request.Body}
 	reply := &RPCReplyMessage{Data: data, MessageID: req.MessageID}
-	err := h.enc.encode(reply)
+	err := h.encode(reply)
 	assert.NoError(h.t, err, "Failed to encode response")
 }
 
@@ -103,7 +106,7 @@ var FailingRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessag
 		Errors: []RPCError{
 			RPCError{Severity: "error", Message: "oops"}},
 	}
-	err := h.enc.encode(reply)
+	err := h.encode(reply)
 	assert.NoError(h.t, err, "Failed to encode response")
 }
 
@@ -135,7 +138,7 @@ func (h *netconfSessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
 	wg.Add(1)
 
 	// Send server hello to client.
-	err := h.enc.encode(&HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
+	err := h.encode(&HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
 	assert.NoError(h.t, err, "Failed to send server hello")
 
 	go h.handleIncomingMessages(wg)
@@ -156,7 +159,7 @@ func (h *netconfSessionHandler) WaitStart() {
 // SendNotification sends a notification message with the supplied body to the client.
 func (h *netconfSessionHandler) SendNotification(body string) *netconfSessionHandler {
 	nm := &NotifyMessage{EventTime: time.Now().String(), Data: body}
-	err := h.enc.encode(nm)
+	err := h.encode(nm)
 	assert.NoError(h.t, err, "Failed to send server notification")
 	return h
 }
@@ -243,4 +246,11 @@ func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
 		h.reqHandlers, reqh = h.reqHandlers[1:], h.reqHandlers[0]
 	}
 	return
+}
+
+func (h *netconfSessionHandler) encode(m interface{}) error {
+	h.encLock.Lock()
+	defer h.encLock.Unlock()
+
+	return h.enc.encode(m)
 }
