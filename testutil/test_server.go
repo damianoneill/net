@@ -19,6 +19,7 @@ type SSHServer struct {
 	listener net.Listener
 }
 
+// SSHHandler is the interface that is implemented to handle an SSH channel.
 type SSHHandler interface {
 	// Handler is a function that handles i/o to/from an SSH channel
 	Handle(t assert.TestingT, ch ssh.Channel)
@@ -31,7 +32,7 @@ func NewSSHServer(t assert.TestingT, uname, password string) *SSHServer {
 	return NewSSHServerHandler(t, uname, password, &echoer{})
 }
 
-// NewSSHServer deflivers a new test SSH Server, with a custom channel handler.
+// NewSSHServerHandler deflivers a new test SSH Server, with a custom channel handler.
 // The server implements password authentication with the given credentials.
 func NewSSHServerHandler(t assert.TestingT, uname, password string, handler SSHHandler) *SSHServer {
 
@@ -103,7 +104,7 @@ func newSSHServerConfig(t assert.TestingT, uname, password string) *ssh.ServerCo
 	return config
 }
 
-func generateHostKey(t assert.TestingT) (hostkey ssh.Signer) {
+func generateHostKey(t assert.TestingT) (hostkey ssh.Signer) { // nolint: interfacer
 
 	reader := rand.Reader
 	bitSize := 2048
@@ -149,6 +150,7 @@ func (e *echoer) Handle(t assert.TestingT, ch ssh.Channel) {
 		}
 		_, err = chWriter.WriteString(fmt.Sprintf("GOT:%s", input))
 		assert.NoError(t, err, "Write failed")
-		chWriter.Flush()
+		err = chWriter.Flush()
+		assert.NoError(t, err, "Flush failed")
 	}
 }
