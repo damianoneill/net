@@ -29,13 +29,17 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 
 func TestExecute(t *testing.T) {
 
-	ncs := newNCClientSession(t, NewTestNetconfServer(t))
+	ts := NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
+	assert.Equal(t, 1, ts.ReqCount(), "Expected request count to be 1")
+	assert.Equal(t, "get", ts.LastReq().XMLName.Local, "Expected GET request")
+	assert.Equal(t, "<response/>", ts.LastReq().Body, "Expected request body")
 }
 
 func TestExecuteWithFailingRequest(t *testing.T) {
@@ -187,7 +191,7 @@ func TestConcurrentExecute(t *testing.T) {
 		}(r)
 	}
 	wg.Wait()
-	assert.Equal(t, 1000, ts.ReqCount, "Unexpected request count")
+	assert.Equal(t, 1000, ts.ReqCount(), "Unexpected request count")
 }
 
 func TestConcurrentExecuteAsync(t *testing.T) {
@@ -215,7 +219,7 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 	}
 	wg.Wait()
 
-	assert.Equal(t, 1000, ts.ReqCount, "Unexpected request count")
+	assert.Equal(t, 1000, ts.ReqCount(), "Unexpected request count")
 }
 
 func BenchmarkExecute(b *testing.B) {
