@@ -30,6 +30,7 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 func TestExecute(t *testing.T) {
 
 	ts := NewTestNetconfServer(t)
+	assert.Nil(t, ts.LastReq(), "No requests should have been executed")
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
 
