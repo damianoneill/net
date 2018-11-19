@@ -47,24 +47,27 @@ type netconfSessionHandler struct {
 	// If the queue is empty, a request is processed by the EchoRequestHandler
 	reqHandlers []RequestHandler
 
-	// Counts the number of requests that have been received by the session.
-	ReqCount int
+	// Records executed requests.
+	Reqs []RPCRequest
 }
 
 // rpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
 // request body is unknown.
 type rpcRequestMessage struct {
-	XMLName   xml.Name   //`xml:"rpc"`
+	XMLName   xml.Name //`xml:"rpc"`
 	MessageID string     `xml:"message-id,attr"`
-	Request   rpcRequest `xml:",any"`
+	Request   RPCRequest `xml:",any"`
 }
-type rpcRequest struct {
+
+// RPCRequest describes an RPC request.
+type RPCRequest struct {
 	XMLName xml.Name
 	Body    string `xml:",innerxml"`
 }
 
 // RPCReplyMessage  and replyData represent an rpc-reply message that will be sent to a client session, where the
-// element type of the reply body (i.e. the content of the data element) is unknown.
+// element type of the reply body (i.e. the content of the data element)
+// is unknown.
 type RPCReplyMessage struct {
 	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
 	Errors    []RPCError `xml:"rpc-error,omitempty"`
@@ -104,7 +107,7 @@ var FailingRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessag
 	reply := &RPCReplyMessage{
 		MessageID: req.MessageID,
 		Errors: []RPCError{
-			RPCError{Severity: "error", Message: "oops"}},
+			{Severity: "error", Message: "oops"}},
 	}
 	err := h.encode(reply)
 	assert.NoError(h.t, err, "Failed to encode response")
@@ -228,7 +231,7 @@ func (h *netconfSessionHandler) handleRPC(token xml.StartElement) {
 	request := &rpcRequestMessage{}
 	h.decodeElement(&request, &token)
 
-	h.ReqCount++
+	h.Reqs = append(h.Reqs, request.Request)
 	reqh := h.nextReqHandler()
 	reqh(h, request)
 }
@@ -254,3 +257,16 @@ func (h *netconfSessionHandler) encode(m interface{}) error {
 
 	return h.enc.encode(m)
 }
+
+func (h *netconfSessionHandler) ReqCount() int {
+	return len(h.Reqs)
+}
+
+func (h *netconfSessionHandler) LastReq() *RPCRequest {
+	count := len(h.Reqs)
+	if count > 0 {
+		return &h.Reqs[count-1]
+	}
+	return nil
+}
+
