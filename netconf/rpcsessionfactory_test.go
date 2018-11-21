@@ -76,7 +76,7 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	w := bufio.NewWriter(&b)
 	log.SetOutput(w)
 
-	ts := NewTestNetconfServer(t)
+	ts := NewTestNetconfServer(t).WithRequestHandler(EchoRequestHandler).WithRequestHandler(EchoRequestHandler).WithRequestHandler(EchoRequestHandler).WithRequestHandler(CloseRequestHandler)
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
@@ -88,6 +88,7 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 		ctx = WithClientTrace(ctx, hooks)
 	}
 	s, _ := NewRPCSession(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
+	sh := ts.SessionHandler(s.ID())
 
 	reply, _ := s.Execute(Request("<get/>"))
 	assert.NotNil(t, reply, "Execute failed unexpectedly")
@@ -101,12 +102,12 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	reply, _ = s.Subscribe("<create-subscription/>", nch)
 	assert.NotNil(t, reply, "Subscribe failed unexpectedly")
 
-	time.AfterFunc(time.Duration(100)*time.Millisecond, func() { ts.SendNotification("<eventA/>") })
+	time.AfterFunc(time.Duration(100)*time.Millisecond, func() { sh.SendNotification("<eventA/>") })
 
 	nmsg := <-nch
 	assert.NotNil(t, nmsg, "Failed to receive notification")
 
-	ts.SendNotification("<eventB/>") // Should be dropped
+	sh.SendNotification("<eventB/>") // Should be dropped
 
 	ts.WithRequestHandler(CloseRequestHandler) // Force error on next request
 	reply, _ = s.Execute(Request("<get/>"))

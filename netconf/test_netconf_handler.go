@@ -31,7 +31,7 @@ type netconfSessionHandler struct {
 	// The capabilities advertised to the client.
 	capabilities []string
 	// The session id to be reported to the client.
-	sid int
+	sid uint64
 
 	// Channel used to signal successful receipt of client capabilities.
 	hellochan chan bool
@@ -48,8 +48,10 @@ type netconfSessionHandler struct {
 	reqHandlers []RequestHandler
 
 	// Records executed requests.
-	Reqs []RPCRequest
+	reqLogger RequestLogger
 }
+
+type RequestLogger func(RPCRequest)
 
 // rpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
 // request body is unknown.
@@ -121,14 +123,16 @@ var CloseRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage)
 // IgnoreRequestHandler does in nothing on receipt of a request.
 var IgnoreRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {}
 
-func newSessionHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid uint64, rl RequestLogger) *netconfSessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &netconfSessionHandler{t: t,
 		sid:          sid,
 		hellochan:    make(chan bool),
 		startwg:      wg,
-		capabilities: DefaultCapabilities}
+		capabilities: DefaultCapabilities,
+		reqLogger:    rl,
+	}
 }
 
 // Handle establishes a Netconf server session on a newly-connected SSH channel.
@@ -231,7 +235,7 @@ func (h *netconfSessionHandler) handleRPC(token xml.StartElement) {
 	request := &rpcRequestMessage{}
 	h.decodeElement(&request, &token)
 
-	h.Reqs = append(h.Reqs, request.Request)
+	h.reqLogger(request.Request)
 	reqh := h.nextReqHandler()
 	reqh(h, request)
 }
@@ -257,16 +261,3 @@ func (h *netconfSessionHandler) encode(m interface{}) error {
 
 	return h.enc.encode(m)
 }
-
-func (h *netconfSessionHandler) ReqCount() int {
-	return len(h.Reqs)
-}
-
-func (h *netconfSessionHandler) LastReq() *RPCRequest {
-	count := len(h.Reqs)
-	if count > 0 {
-		return &h.Reqs[count-1]
-	}
-	return nil
-}
-
