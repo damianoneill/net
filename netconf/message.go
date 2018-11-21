@@ -38,7 +38,7 @@ type Session interface {
 	Close()
 
 	// ID delivers the server-allocated id of the session.
-	ID() int
+	ID() uint64
 }
 
 type sesImpl struct {
@@ -182,7 +182,7 @@ func (si *sesImpl) Close() {
 	}
 }
 
-func (si *sesImpl) ID() int {
+func (si *sesImpl) ID() uint64 {
 	return si.hello.SessionID
 }
 

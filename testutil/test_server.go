@@ -25,21 +25,23 @@ type SSHHandler interface {
 	Handle(t assert.TestingT, ch ssh.Channel)
 }
 
+type HandlerFactory func(t assert.TestingT) SSHHandler
+
 // NewSSHServer deflivers a new test SSH Server, with a Handler that simply echoes lines received.
 // The server implements password authentication with the given credentials.
 func NewSSHServer(t assert.TestingT, uname, password string) *SSHServer {
 
-	return NewSSHServerHandler(t, uname, password, &echoer{})
+	return NewSSHServerHandler(t, uname, password, func(t assert.TestingT) (SSHHandler) {return &echoer{}})
 }
 
 // NewSSHServerHandler deflivers a new test SSH Server, with a custom channel handler.
 // The server implements password authentication with the given credentials.
-func NewSSHServerHandler(t assert.TestingT, uname, password string, handler SSHHandler) *SSHServer {
+func NewSSHServerHandler(t assert.TestingT, uname, password string, factory HandlerFactory) *SSHServer {
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err, "Listen failed")
 
-	go acceptConnections(t, listener, newSSHServerConfig(t, uname, password), handler)
+	go acceptConnections(t, listener, newSSHServerConfig(t, uname, password), factory)
 
 	return &SSHServer{listener: listener}
 }
@@ -55,7 +57,7 @@ func (ts *SSHServer) Close() {
 	ts.listener.Close()
 }
 
-func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, handler SSHHandler) {
+func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, factory HandlerFactory) {
 	// nolint: gosec, errcheck
 	for {
 		nConn, err := listener.Accept()
@@ -84,7 +86,7 @@ func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.Ser
 
 			go func() {
 				defer dataChan.Close()
-				handler.Handle(t, dataChan)
+				factory(t).Handle(t, dataChan)
 			}()
 		}
 	}

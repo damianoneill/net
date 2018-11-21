@@ -14,7 +14,7 @@ type Request string
 type HelloMessage struct {
 	XMLName      xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 hello"`
 	Capabilities []string `xml:"capabilities>capability"`
-	SessionID    int      `xml:"session-id,omitempty"`
+	SessionID    uint64      `xml:"session-id,omitempty"`
 }
 
 // RPCMessage defines the an rpc request message
