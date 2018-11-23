@@ -21,7 +21,6 @@ const (
 type TestNCServer struct {
 	*testutil.SSHServer
 	sessionHandlers map[uint64]*NetconfSessionHandler
-	Reqs []RPCRequest
 	reqHandlers []RequestHandler
 	caps []string
 	nextSid uint64
