@@ -20,7 +20,7 @@ const (
 // be invoked to handle netconf messages.
 type TestNCServer struct {
 	*testutil.SSHServer
-	sessionHandlers map[uint64]*netconfSessionHandler
+	sessionHandlers map[uint64]*NetconfSessionHandler
 	Reqs []RPCRequest
 	reqHandlers []RequestHandler
 	caps []string
@@ -35,7 +35,7 @@ type TestNCServer struct {
 // WithRequestHandler methods.
 func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 
-	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*netconfSessionHandler)}
+	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*NetconfSessionHandler)}
 
 	if tctx == nil {
 		// Default test context to built-in implementation.
@@ -59,9 +59,8 @@ func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
 	}
 }
 
-func (ncs *TestNCServer) reqLogger(r RPCRequest)  {
-	// TODO SJ Make this goroutine-safe
-	ncs.Reqs = append(ncs.Reqs, r)
+func (ncs *TestNCServer) LastHandler() (*NetconfSessionHandler) {
+	return ncs.sessionHandlers[ncs.nextSid]
 }
 
 // WithRequestHandler adds a request handler to the netconf session.
@@ -100,7 +99,7 @@ func (ncs *TestNCServer) FailNow() {
 }
 
 // SessionHandler delivers the netconf session handler associated with the specified session id.
-func (ncs *TestNCServer) SessionHandler(id uint64) (*netconfSessionHandler) {
+func (ncs *TestNCServer) SessionHandler(id uint64) (*NetconfSessionHandler) {
 	sh, ok := ncs.sessionHandlers[id]
 	if !ok {
 		ncs.tctx.Errorf("Failed to get handler for session %d", id)
