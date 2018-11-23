@@ -47,8 +47,8 @@ type netconfSessionHandler struct {
 	// If the queue is empty, a request is processed by the EchoRequestHandler
 	reqHandlers []RequestHandler
 
-	// Records executed requests.
-	reqLogger RequestLogger
+	reqMutex sync.Mutex
+	Reqs []RPCRequest
 }
 
 type RequestLogger func(RPCRequest)
@@ -123,7 +123,7 @@ var CloseRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage)
 // IgnoreRequestHandler does in nothing on receipt of a request.
 var IgnoreRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {}
 
-func newSessionHandler(t assert.TestingT, sid uint64, rl RequestLogger) *netconfSessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid uint64) *netconfSessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &netconfSessionHandler{t: t,
@@ -131,7 +131,6 @@ func newSessionHandler(t assert.TestingT, sid uint64, rl RequestLogger) *netconf
 		hellochan:    make(chan bool),
 		startwg:      wg,
 		capabilities: DefaultCapabilities,
-		reqLogger:    rl,
 	}
 }
 
@@ -260,4 +259,23 @@ func (h *netconfSessionHandler) encode(m interface{}) error {
 	defer h.encLock.Unlock()
 
 	return h.enc.encode(m)
+}
+
+func (h *netconfSessionHandler) reqLogger(r RPCRequest)  {
+	h.reqMutex.Lock()
+	defer h.reqMutex.Unlock()
+	h.Reqs = append(h.Reqs, r)
+}
+
+
+func (h *netconfSessionHandler) ReqCount() int {
+	return len(h.Reqs)
+}
+
+func (h *netconfSessionHandler) LastReq() *RPCRequest {
+	count := len(h.Reqs)
+	if count > 0 {
+		return &h.Reqs[count-1]
+	}
+	return nil
 }

@@ -51,7 +51,7 @@ func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
 	return func(t assert.TestingT) (testutil.SSHHandler) {
 		sid := atomic.AddUint64(&ncs.nextSid, 1)
-		sess := newSessionHandler(ncs, sid, ncs.reqLogger)
+		sess := newSessionHandler(ncs, sid)
 		ncs.sessionHandlers[sid] = sess
 		sess.capabilities = ncs.caps
 		sess.reqHandlers = ncs.reqHandlers
@@ -97,18 +97,6 @@ func (ncs *TestNCServer) Errorf(format string, args ...interface{}) {
 // created.
 func (ncs *TestNCServer) FailNow() {
 	runtime.Goexit()
-}
-
-func (ncs *TestNCServer) ReqCount() int {
-	return len(ncs.Reqs)
-}
-
-func (ncs *TestNCServer) LastReq() *RPCRequest {
-	count := len(ncs.Reqs)
-	if count > 0 {
-		return &ncs.Reqs[count-1]
-	}
-	return nil
 }
 
 // SessionHandler delivers the netconf session handler associated with the specified session id.

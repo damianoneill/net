@@ -31,17 +31,19 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 func TestExecute(t *testing.T) {
 
 	ts := NewTestNetconfServer(t)
-	assert.Nil(t, ts.LastReq(), "No requests should have been executed")
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
+
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Nil(t, sh.LastReq(), "No requests should have been executed")
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
-	assert.Equal(t, 1, ts.ReqCount(), "Expected request count to be 1")
-	assert.Equal(t, "get", ts.LastReq().XMLName.Local, "Expected GET request")
-	assert.Equal(t, "<response/>", ts.LastReq().Body, "Expected request body")
+	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
+	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
+	assert.Equal(t, "<response/>", sh.LastReq().Body, "Expected request body")
 }
 
 func TestExecuteWithFailingRequest(t *testing.T) {
@@ -191,10 +193,12 @@ func TestConcurrentExecute(t *testing.T) {
 				assert.NoError(t, err, "Not expecting exec to fail")
 				assert.Equal(t, replybody, reply.Data, "Reply should contain response data")
 			}
+
 		}(r)
 	}
 	wg.Wait()
-	assert.Equal(t, 1000, ts.ReqCount(), "Unexpected request count")
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Equal(t, 1000, sh.ReqCount(), "Unexpected request count")
 }
 
 func TestConcurrentExecuteAsync(t *testing.T) {
@@ -221,8 +225,8 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 		}(r)
 	}
 	wg.Wait()
-
-	assert.Equal(t, 1000, ts.ReqCount(), "Unexpected request count")
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Equal(t, 1000, sh.ReqCount(), "Unexpected request count")
 }
 
 func BenchmarkExecute(b *testing.B) {

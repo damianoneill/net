@@ -9,9 +9,9 @@ import (
 func TestMultipleSessions(t *testing.T) {
 
 	ts := NewTestNetconfServer(t)
-	assert.Nil(t, ts.LastReq(), "No requests should have been executed")
 
 	ncs := newNCClientSession(t, ts)
+	assert.Nil(t, ts.SessionHandler(ncs.ID()).LastReq(), "No requests should have been executed")
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
