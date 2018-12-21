@@ -47,7 +47,7 @@ type ClientTrace struct {
 
 	// ConnectionClosed is called after a transport connection has been closed, with
 	// err indicating any error condition.
-	ConnectionClosed func(err error)
+	ConnectionClosed func(target string, err error)
 
 	// ReadStart is called before a read from the underlying transport.
 	ReadStart func(buf []byte)
@@ -62,7 +62,7 @@ type ClientTrace struct {
 	WriteDone func(buf []byte, c int, err error, d time.Duration)
 
 	// Error is called after an error condition has been detected.
-	Error func(context string, err error)
+	Error func(context, target string, err error)
 
 	// NotificationReceived is called when a notification has been received.
 	NotificationReceived func(m *Notification)
@@ -79,8 +79,8 @@ type ClientTrace struct {
 
 // DefaultLoggingHooks provides a default logging hook to report errors.
 var DefaultLoggingHooks = &ClientTrace{
-	Error: func(context string, err error) {
-		log.Printf("Error context:%s err:%v\n", context, err)
+	Error: func(context, target string, err error) {
+		log.Printf("Error context:%s target:%s err:%v\n", context, target, err)
 	},
 }
 
@@ -92,8 +92,8 @@ var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
 		log.Printf("ConnectDone target:%s config:%v err:%v took:%dns\n", target, clientConfig, err, d)
 	},
-	ConnectionClosed: func(err error) {
-		log.Printf("ConnectionClosed err:%v\n", err)
+	ConnectionClosed: func(target string, err error) {
+		log.Printf("ConnectionClosed target:%s err:%v\n", target, err)
 	},
 	ReadStart: func(p []byte) {
 		log.Printf("ReadStart capacity:%d\n", len(p))
@@ -108,8 +108,8 @@ var DiagnosticLoggingHooks = &ClientTrace{
 		log.Printf("WriteDone len:%d err:%v took:%dns\n", c, err, d)
 	},
 
-	Error: func(context string, err error) {
-		log.Printf("Error context:%s err:%v\n", context, err)
+	Error: func(context, target string, err error) {
+		log.Printf("Error context:%s target:%s err:%v\n", context, target, err)
 	},
 	NotificationReceived: func(n *Notification) {
 		log.Printf("NotificationReceived %s\n", n.XMLName.Local)
@@ -129,7 +129,7 @@ var DiagnosticLoggingHooks = &ClientTrace{
 var NoOpLoggingHooks = &ClientTrace{
 	ConnectStart:     func(clientConfig *ssh.ClientConfig, target string) {},
 	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
-	ConnectionClosed: func(err error) {},
+	ConnectionClosed: func(target string, err error) {},
 
 	ReadStart: func(p []byte) {},
 	ReadDone:  func(p []byte, c int, err error, d time.Duration) {},
@@ -137,7 +137,7 @@ var NoOpLoggingHooks = &ClientTrace{
 	WriteStart: func(p []byte) {},
 	WriteDone:  func(p []byte, c int, err error, d time.Duration) {},
 
-	Error:                func(context string, err error) {},
+	Error:                func(context, target string, err error) {},
 	NotificationReceived: func(n *Notification) {},
 	NotificationDropped:  func(n *Notification) {},
 	ExecuteStart:         func(req Request, async bool) {},

@@ -60,6 +60,8 @@ type sesImpl struct {
 	rchLock sync.Mutex
 
 	notificationDropCount uint64
+
+	target string
 }
 
 // DefaultCapabilities sets the default capabilities of the client library
@@ -90,6 +92,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 	si := &sesImpl{
 		cfg:   cfg,
 		t:     t,
+		target: t.(*tImpl).target,
 		dec:   newDecoder(t),
 		enc:   newEncoder(t),
 		trace: ContextClientTrace(ctx),
@@ -99,7 +102,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 	// Send hello
 	err := si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
 	if err != nil {
-		si.trace.Error("Failed to encode hello", err)
+		si.trace.Error("Failed to encode hello", si.target, err)
 		si.Close()
 		return nil, err
 	}
@@ -109,7 +112,7 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 
 	err = si.waitForServerHello()
 	if err != nil {
-		si.trace.Error("Failed to receive hello", err)
+		si.trace.Error("Failed to receive hello", si.target, err)
 		si.Close()
 		return nil, err
 	}
@@ -178,7 +181,7 @@ func (si *sesImpl) Subscribe(req Request, nchan chan *Notification) (reply *RPCR
 func (si *sesImpl) Close() {
 	err := si.t.Close()
 	if err != nil {
-		si.trace.Error("Session close failed", err)
+		si.trace.Error("Session close failed", si.target, err)
 	}
 }
 
@@ -306,7 +309,7 @@ func buildNotification(nmsg *NotificationMessage) *Notification {
 
 func (si *sesImpl) decodeElement(v interface{}, start *xml.StartElement) (err error) {
 	if err = si.dec.DecodeElement(v, start); err != nil {
-		si.trace.Error(fmt.Sprintf("DecodeElement token:%s", start.Name.Local), err)
+		si.trace.Error(fmt.Sprintf("DecodeElement token:%s", start.Name.Local), si.target, err)
 	}
 	return
 }
