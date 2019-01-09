@@ -24,6 +24,7 @@ type tImpl struct {
 	sshSession  *ssh.Session
 	sshClient   *ssh.Client
 	trace       *ClientTrace
+	target 		string
 }
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
@@ -31,7 +32,7 @@ type tImpl struct {
 // nolint : gosec
 func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
 
-	var impl tImpl
+	impl := tImpl{target: target}
 	impl.trace = ContextClientTrace(ctx)
 
 	impl.trace.ConnectStart(clientConfig, target)
@@ -97,7 +98,7 @@ func (t *tImpl) Write(p []byte) (n int, err error) {
 // Errors are returned with priority matching the same order.
 func (t *tImpl) Close() (err error) {
 
-	defer t.trace.ConnectionClosed(err)
+	defer t.trace.ConnectionClosed(t.target, err)
 
 	var (
 		writeCloseErr      error
