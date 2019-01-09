@@ -20,7 +20,7 @@ const (
 // be invoked to handle netconf messages.
 type TestNCServer struct {
 	*testutil.SSHServer
-	sessionHandlers map[uint64]*NetconfSessionHandler
+	sessionHandlers map[uint64]*SessionHandler
 	reqHandlers []RequestHandler
 	caps []string
 	nextSid uint64
@@ -34,7 +34,7 @@ type TestNCServer struct {
 // WithRequestHandler methods.
 func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 
-	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*NetconfSessionHandler)}
+	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler)}
 
 	if tctx == nil {
 		// Default test context to built-in implementation.
@@ -58,7 +58,8 @@ func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
 	}
 }
 
-func (ncs *TestNCServer) LastHandler() (*NetconfSessionHandler) {
+// LastHandler delivers the most recently instantiated session handler.
+func (ncs *TestNCServer) LastHandler() (*SessionHandler) {
 	return ncs.sessionHandlers[ncs.nextSid]
 }
 
@@ -98,7 +99,7 @@ func (ncs *TestNCServer) FailNow() {
 }
 
 // SessionHandler delivers the netconf session handler associated with the specified session id.
-func (ncs *TestNCServer) SessionHandler(id uint64) (*NetconfSessionHandler) {
+func (ncs *TestNCServer) SessionHandler(id uint64) (*SessionHandler) {
 	sh, ok := ncs.sessionHandlers[id]
 	if !ok {
 		ncs.tctx.Errorf("Failed to get handler for session %d", id)

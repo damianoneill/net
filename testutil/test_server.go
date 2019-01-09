@@ -25,6 +25,7 @@ type SSHHandler interface {
 	Handle(t assert.TestingT, ch ssh.Channel)
 }
 
+// HandlerFactory is a test function that will deliver an SSHHandler.
 type HandlerFactory func(t assert.TestingT) SSHHandler
 
 // NewSSHServer deflivers a new test SSH Server, with a Handler that simply echoes lines received.
