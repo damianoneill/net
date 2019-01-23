@@ -191,7 +191,7 @@ func (si *sesImpl) waitForServerHello() (err error) {
 	select {
 	case <-si.hellochan:
 	case <-time.After(time.Duration(si.cfg.setupTimeoutSecs) * time.Second):
-		err = errors.New("Failed to get Hello from server")
+		err = errors.New("failed to get hello from server")
 	}
 	return
 }
