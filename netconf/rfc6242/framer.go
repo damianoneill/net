@@ -88,7 +88,14 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 				if d.pendingFramer != nil {
 					d.framer = d.pendingFramer
 					d.pendingFramer = nil
-					return
+					// If there is more input beyond the EOM, this must be processed with the new framer.
+					if advance < len(b) {
+						var adv int
+						adv, token, err = d.framer(d, b[advance:], atEOF)
+						if err == nil {
+							advance += adv
+						}
+					}
 				}
 				d.anySeen = true
 				if !atEOF {

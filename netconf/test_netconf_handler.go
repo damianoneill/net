@@ -54,7 +54,7 @@ type netconfSessionHandler struct {
 // rpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
 // request body is unknown.
 type rpcRequestMessage struct {
-	XMLName   xml.Name //`xml:"rpc"`
+	XMLName   xml.Name 
 	MessageID string     `xml:"message-id,attr"`
 	Request   RPCRequest `xml:",any"`
 }
