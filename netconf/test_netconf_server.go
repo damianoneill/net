@@ -34,7 +34,7 @@ type TestNCServer struct {
 // WithRequestHandler methods.
 func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 
-	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler)}
+	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler), caps: DefaultCapabilities}
 
 	if tctx == nil {
 		// Default test context to built-in implementation.
