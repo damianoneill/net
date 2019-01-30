@@ -17,8 +17,6 @@ package rfc6242
 import (
 	"bufio"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 // FramerFn is the input tokenization function used by a Decoder.
@@ -27,12 +25,7 @@ type FramerFn func(d *Decoder, data []byte, atEOF bool) (advance int, token []by
 // Decoder is an RFC6242 transport framing decoder filter.
 //
 // Decoder operates as an inline filter, taking a io.Reader as input
-// and providing io.Reader as well as the low-overhead io.WriterTo.
-//
-// When used with io.Copy, the io.Reader interface is expected of the
-// source argument, but if the value passed also supports io.WriterTo
-// (as does Decoder), the WriteTo function will instead be called with
-// the copy destination as its writer argument.
+// and providing io.Reader.
 //
 // Decoder is not safe for concurrent use.
 type Decoder struct {
@@ -56,6 +49,7 @@ type Decoder struct {
 	chunkDataLeft uint64 // state
 	bufSize       int    // config
 	anySeen       bool
+	seenEOM       bool
 	eofOK         bool
 }
 
@@ -114,21 +108,6 @@ func (d *Decoder) Read(b []byte) (n int, err error) {
 	return
 }
 
-// WriteTo reads from the Decoder's input, strips the transport
-// encoding and writes the decoded data to w, implementing
-// io.WriterTo.
-func (d *Decoder) WriteTo(w io.Writer) (n int64, err error) {
-	for err == nil && d.s.Scan() {
-		b := d.s.Bytes()
-		_, err = w.Write(b)
-		n += int64(len(b))
-	}
-	if err = d.s.Err(); err == nil && !d.eofOK {
-		err = errors.WithStack(io.ErrUnexpectedEOF)
-	}
-	return
-}
-
 func (d *Decoder) split(b []byte, eof bool) (a int, t []byte, err error) {
 	if eof && len(b) == 0 {
 		err = d.scanErr
@@ -147,7 +126,7 @@ func (d *Decoder) setFramer(f FramerFn) {
 	// - xml decoder delivers decoded hello to application code
 	// - application code inspects hello, enables chunked framing and calls the xml decoder
 	// - transport reader delivers 'missing' end of message
-	if !d.anySeen {
+	if !d.seenEOM {
 		d.pendingFramer = f
 	} else {
 		d.framer = f
