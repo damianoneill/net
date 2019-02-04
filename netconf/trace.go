@@ -41,9 +41,12 @@ type ClientTrace struct {
 	// ConnectStart is called when starting to connect to a remote server.
 	ConnectStart func(clientConfig *ssh.ClientConfig, target string)
 
-	// ConnectDone is called when the connection attempt compiletes, with err indicating
+	// ConnectDone is called when the transport connection attempt completes, with err indicating
 	// whether it was successful.
 	ConnectDone func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration)
+
+	// HelloDone is called when the hello message has been received from the server.
+	HelloDone func(msg *HelloMessage)
 
 	// ConnectionClosed is called after a transport connection has been closed, with
 	// err indicating any error condition.
@@ -95,6 +98,9 @@ var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectionClosed: func(err error) {
 		log.Printf("ConnectionClosed err:%v\n", err)
 	},
+	HelloDone: func(msg *HelloMessage) {
+		log.Printf("HelloDone hello:%v\n", msg)
+	},
 	ReadStart: func(p []byte) {
 		log.Printf("ReadStart capacity:%d\n", len(p))
 	},
@@ -130,9 +136,9 @@ var NoOpLoggingHooks = &ClientTrace{
 	ConnectStart:     func(clientConfig *ssh.ClientConfig, target string) {},
 	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
 	ConnectionClosed: func(err error) {},
-
-	ReadStart: func(p []byte) {},
-	ReadDone:  func(p []byte, c int, err error, d time.Duration) {},
+	HelloDone:        func(msg *HelloMessage) {},
+	ReadStart:        func(p []byte) {},
+	ReadDone:         func(p []byte, c int, err error, d time.Duration) {},
 
 	WriteStart: func(p []byte) {},
 	WriteDone:  func(p []byte, c int, err error, d time.Duration) {},

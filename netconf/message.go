@@ -258,6 +258,7 @@ func (si *sesImpl) handleHello(token xml.StartElement) (err error) {
 	}
 
 	si.hellochan <- true
+	si.trace.HelloDone(si.hello)
 	return
 }
 
