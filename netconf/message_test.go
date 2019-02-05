@@ -19,6 +19,7 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 
 	assert.NotNil(t, ncs, "Session should be non-nil")
 	assert.Equal(t, 4, ncs.ID(), "Session id not defined correctly")
+	assert.Contains(t, ncs.ServerCapabilities(), CapBase10, "Failed to retrieve expected capabilities")
 
 	ts.WaitStart()
 	assert.NotNil(t, ts.ClientHello, "Should have sent hello")
