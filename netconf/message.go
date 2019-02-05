@@ -39,6 +39,9 @@ type Session interface {
 
 	// ID delivers the server-allocated id of the session.
 	ID() int
+
+	// Capabilities delivers the server-supplied capabilities.
+	ServerCapabilities() []string
 }
 
 type sesImpl struct {
@@ -184,6 +187,10 @@ func (si *sesImpl) Close() {
 
 func (si *sesImpl) ID() int {
 	return si.hello.SessionID
+}
+
+func (si *sesImpl) ServerCapabilities() []string {
+	return si.hello.Capabilities
 }
 
 func (si *sesImpl) waitForServerHello() (err error) {
