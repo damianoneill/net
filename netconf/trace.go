@@ -137,8 +137,8 @@ var NoOpLoggingHooks = &ClientTrace{
 	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
 	ConnectionClosed: func(target string, err error) {},
 	HelloDone:        func(msg *HelloMessage) {},
-	ReadStart: func(p []byte) {},
-	ReadDone:  func(p []byte, c int, err error, d time.Duration) {},
+	ReadStart:        func(p []byte) {},
+	ReadDone:         func(p []byte, c int, err error, d time.Duration) {},
 
 	WriteStart: func(p []byte) {},
 	WriteDone:  func(p []byte, c int, err error, d time.Duration) {},
