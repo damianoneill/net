@@ -98,7 +98,7 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 					}
 				}
 				d.seenEOM = true
-				if !atEOF {
+				if !atEOF && len(token) > 0 {
 					return
 				}
 			}
