@@ -39,8 +39,6 @@ func TestMultipleTestServersWithoutChunkedEncoding(t *testing.T) {
 
 	wg.Wait()
 
-	fmt.Println("<<< waited")
-
 	for i := 0; i < len(ts); i++ {
 		assert.Equal(t, reqCount, ts[i].LastHandler().ReqCount())
 	}
