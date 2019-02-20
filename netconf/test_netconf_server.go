@@ -3,6 +3,7 @@ package netconf
 import (
 	"fmt"
 	"runtime"
+	"sync/atomic"
 
 	"github.com/damianoneill/net/testutil"
 	assert "github.com/stretchr/testify/require"
@@ -19,7 +20,11 @@ const (
 // be invoked to handle netconf messages.
 type TestNCServer struct {
 	*testutil.SSHServer
-	*netconfSessionHandler
+	sessionHandlers map[uint64]*SessionHandler
+	reqHandlers []RequestHandler
+	caps []string
+	nextSid uint64
+	tctx assert.TestingT
 }
 
 // NewTestNetconfServer creates a new TestNCServer that will accept Netconf localhost connections on an ephemeral port (available
@@ -29,36 +34,54 @@ type TestNCServer struct {
 // WithRequestHandler methods.
 func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 
-	ncs := &TestNCServer{}
-
-	ncs.netconfSessionHandler = newSessionHandler(ncs, 4)
+	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler), caps: DefaultCapabilities}
 
 	if tctx == nil {
 		// Default test context to built-in implementation.
 		tctx = ncs
 	}
-	ncs.SSHServer = testutil.NewSSHServerHandler(tctx, TestUserName, TestPassword, ncs.netconfSessionHandler)
+	ncs.tctx = tctx
+
+	ncs.SSHServer = testutil.NewSSHServerHandler(tctx, TestUserName, TestPassword, ncs.newFactory())
 
 	return ncs
 }
 
+func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
+	return func(t assert.TestingT) (testutil.SSHHandler) {
+		sid := atomic.AddUint64(&ncs.nextSid, 1)
+		sess := newSessionHandler(ncs, sid)
+		ncs.sessionHandlers[sid] = sess
+		sess.capabilities = ncs.caps
+		sess.reqHandlers = ncs.reqHandlers
+		return sess
+	}
+}
+
+// LastHandler delivers the most recently instantiated session handler.
+func (ncs *TestNCServer) LastHandler() (*SessionHandler) {
+	return ncs.sessionHandlers[ncs.nextSid]
+}
+
 // WithRequestHandler adds a request handler to the netconf session.
 func (ncs *TestNCServer) WithRequestHandler(rh RequestHandler) *TestNCServer {
-	ncs.netconfSessionHandler.reqHandlers = append(ncs.netconfSessionHandler.reqHandlers, rh)
+	ncs.reqHandlers = append(ncs.reqHandlers, rh)
 	return ncs
 }
 
 // WithCapabilities define the capabilities that the server will advertise when a netconf client connects.
 func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
-	ncs.netconfSessionHandler.capabilities = caps
+	ncs.caps = caps
 	return ncs
 }
 
 // Close closes any active transport to the test server and prevents subsequent connections.
 func (ncs *TestNCServer) Close() {
-	if ncs.netconfSessionHandler.ch != nil {
-		ncs.netconfSessionHandler.ch.Close() // nolint: gosec, errcheck
-		ncs.netconfSessionHandler.ch = nil
+	for k,v := range ncs.sessionHandlers {
+		if v.ch != nil {
+			v.Close() // nolint: gosec, errcheck
+			ncs.sessionHandlers[k] = nil
+		}
 	}
 	ncs.SSHServer.Close()
 }
@@ -74,3 +97,14 @@ func (ncs *TestNCServer) Errorf(format string, args ...interface{}) {
 func (ncs *TestNCServer) FailNow() {
 	runtime.Goexit()
 }
+
+// SessionHandler delivers the netconf session handler associated with the specified session id.
+func (ncs *TestNCServer) SessionHandler(id uint64) (*SessionHandler) {
+	sh, ok := ncs.sessionHandlers[id]
+	if !ok {
+		ncs.tctx.Errorf("Failed to get handler for session %d", id)
+		ncs.tctx.FailNow()
+	}
+	return sh
+}
+

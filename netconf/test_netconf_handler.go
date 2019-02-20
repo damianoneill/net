@@ -13,8 +13,8 @@ var (
 	nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
 )
 
-// netconfSessionHandler represents the server side of an active netconf SSH session.
-type netconfSessionHandler struct {
+// SessionHandler represents the server side of an active netconf SSH session.
+type SessionHandler struct {
 	// t is the testing context used for handling unexpected errors.
 	t assert.TestingT
 
@@ -31,7 +31,7 @@ type netconfSessionHandler struct {
 	// The capabilities advertised to the client.
 	capabilities []string
 	// The session id to be reported to the client.
-	sid int
+	sid uint64
 
 	// Channel used to signal successful receipt of client capabilities.
 	hellochan chan bool
@@ -48,6 +48,7 @@ type netconfSessionHandler struct {
 	reqHandlers []RequestHandler
 
 	// Records executed requests.
+	reqMutex sync.Mutex
 	Reqs []RPCRequest
 }
 
@@ -91,11 +92,11 @@ type NotifyMessage struct {
 
 // RequestHandler is a function type that will be invoked by the session handler to handle an RPC
 // request.
-type RequestHandler func(h *netconfSessionHandler, req *rpcRequestMessage)
+type RequestHandler func(h *SessionHandler, req *rpcRequestMessage)
 
 // EchoRequestHandler responds to a request with a reply containing a data element holding
 // the body of the request.
-var EchoRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
+var EchoRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 	data := replyData{Data: req.Request.Body}
 	reply := &RPCReplyMessage{Data: data, MessageID: req.MessageID}
 	err := h.encode(reply)
@@ -103,7 +104,7 @@ var EchoRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) 
 }
 
 // FailingRequestHandler replies to a request with an error.
-var FailingRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
+var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 	reply := &RPCReplyMessage{
 		MessageID: req.MessageID,
 		Errors: []RPCError{
@@ -114,25 +115,26 @@ var FailingRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessag
 }
 
 // CloseRequestHandler closes the transport channel on request receipt.
-var CloseRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {
+var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 	h.ch.Close() // nolint: errcheck, gosec
 }
 
 // IgnoreRequestHandler does in nothing on receipt of a request.
-var IgnoreRequestHandler = func(h *netconfSessionHandler, req *rpcRequestMessage) {}
+var IgnoreRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {}
 
-func newSessionHandler(t assert.TestingT, sid int) *netconfSessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	return &netconfSessionHandler{t: t,
+	return &SessionHandler{t: t,
 		sid:          sid,
 		hellochan:    make(chan bool),
 		startwg:      wg,
-		capabilities: DefaultCapabilities}
+		capabilities: DefaultCapabilities,
+	}
 }
 
 // Handle establishes a Netconf server session on a newly-connected SSH channel.
-func (h *netconfSessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
+func (h *SessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
 	h.ch = ch
 	h.dec = newDecoder(ch)
 	h.enc = newEncoder(ch)
@@ -155,12 +157,13 @@ func (h *netconfSessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
 	wg.Wait()
 }
 
-func (h *netconfSessionHandler) WaitStart() {
+// WaitStart waits until the session handler is ready.
+func (h *SessionHandler) WaitStart() {
 	h.startwg.Wait()
 }
 
 // SendNotification sends a notification message with the supplied body to the client.
-func (h *netconfSessionHandler) SendNotification(body string) *netconfSessionHandler {
+func (h *SessionHandler) SendNotification(body string) *SessionHandler {
 	nm := &NotifyMessage{EventTime: time.Now().String(), Data: body}
 	err := h.encode(nm)
 	assert.NoError(h.t, err, "Failed to send server notification")
@@ -168,11 +171,11 @@ func (h *netconfSessionHandler) SendNotification(body string) *netconfSessionHan
 }
 
 // Close initiates session tear-down by closing the underlying transport channel.
-func (h *netconfSessionHandler) Close() {
+func (h *SessionHandler) Close() {
 	h.ch.Close() // nolint: errcheck, gosec
 }
 
-func (h *netconfSessionHandler) waitForClientHello() {
+func (h *SessionHandler) waitForClientHello() {
 
 	// Wait for the input handler to send the client hello.
 	select {
@@ -183,7 +186,7 @@ func (h *netconfSessionHandler) waitForClientHello() {
 	assert.NotNil(h.t, h.ClientHello, "Failed to get client hello")
 }
 
-func (h *netconfSessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
+func (h *SessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -197,7 +200,7 @@ func (h *netconfSessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
 	}
 }
 
-func (h *netconfSessionHandler) handleToken(token xml.Token) {
+func (h *SessionHandler) handleToken(token xml.Token) {
 	switch token := token.(type) {
 	case xml.StartElement:
 		switch token.Name {
@@ -213,7 +216,7 @@ func (h *netconfSessionHandler) handleToken(token xml.Token) {
 	}
 }
 
-func (h *netconfSessionHandler) handleHello(token xml.StartElement) {
+func (h *SessionHandler) handleHello(token xml.StartElement) {
 	// Decode the hello element and send it down the channel to trigger the rest of the session setup.
 
 	h.decodeElement(&h.ClientHello, &token)
@@ -227,21 +230,21 @@ func (h *netconfSessionHandler) handleHello(token xml.StartElement) {
 	h.hellochan <- true
 }
 
-func (h *netconfSessionHandler) handleRPC(token xml.StartElement) {
+func (h *SessionHandler) handleRPC(token xml.StartElement) {
 	request := &rpcRequestMessage{}
 	h.decodeElement(&request, &token)
 
-	h.Reqs = append(h.Reqs, request.Request)
+	h.reqLogger(request.Request)
 	reqh := h.nextReqHandler()
 	reqh(h, request)
 }
 
-func (h *netconfSessionHandler) decodeElement(v interface{}, start *xml.StartElement) {
+func (h *SessionHandler) decodeElement(v interface{}, start *xml.StartElement) {
 	err := h.dec.DecodeElement(v, start)
 	assert.NoError(h.t, err, "DecodeElement failed")
 }
 
-func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
+func (h *SessionHandler) nextReqHandler() (reqh RequestHandler) {
 	l := len(h.reqHandlers)
 	if l == 0 {
 		reqh = EchoRequestHandler
@@ -251,22 +254,29 @@ func (h *netconfSessionHandler) nextReqHandler() (reqh RequestHandler) {
 	return
 }
 
-func (h *netconfSessionHandler) encode(m interface{}) error {
+func (h *SessionHandler) encode(m interface{}) error {
 	h.encLock.Lock()
 	defer h.encLock.Unlock()
 
 	return h.enc.encode(m)
 }
 
-func (h *netconfSessionHandler) ReqCount() int {
+func (h *SessionHandler) reqLogger(r RPCRequest)  {
+	h.reqMutex.Lock()
+	defer h.reqMutex.Unlock()
+	h.Reqs = append(h.Reqs, r)
+}
+
+// ReqCount delivers the number of requests received by the handler.
+func (h *SessionHandler) ReqCount() int {
 	return len(h.Reqs)
 }
 
-func (h *netconfSessionHandler) LastReq() *RPCRequest {
+// LastReq delivers the last request received by the handler, or nil if no requests have been received.
+func (h *SessionHandler) LastReq() *RPCRequest {
 	count := len(h.Reqs)
 	if count > 0 {
 		return &h.Reqs[count-1]
 	}
 	return nil
 }
-

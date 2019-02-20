@@ -79,13 +79,14 @@ func ExampleSession_Subscribe() {
 
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
 	s, _ := NewRPCSession(context.Background(), sshConfig, serverAddress)
+	sh := ts.SessionHandler(s.ID())
 
 	nch := make(chan *Notification)
 	_, _ = s.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
 
 	// Get test server to send a notification in 500ms.
 	time.AfterFunc(time.Millisecond*time.Duration(500), func() {
-		ts.SendNotification(`<typeA xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-notifications"><name>XXX</name></typeA>`)
+		sh.SendNotification(`<typeA xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-notifications"><name>XXX</name></typeA>`)
 	})
 
 	n := <-nch

@@ -16,14 +16,15 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
+	sh := ts.SessionHandler(ncs.ID())
 
 	assert.NotNil(t, ncs, "Session should be non-nil")
-	assert.Equal(t, 4, ncs.ID(), "Session id not defined correctly")
+	assert.Equal(t, uint64(1), ncs.ID(), "Session id not defined correctly")
 	assert.Contains(t, ncs.ServerCapabilities(), CapBase10, "Failed to retrieve expected capabilities")
 
-	ts.WaitStart()
-	assert.NotNil(t, ts.ClientHello, "Should have sent hello")
-	assert.Equal(t, ts.ClientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
+	sh.WaitStart()
+	assert.NotNil(t, sh.ClientHello, "Should have sent hello")
+	assert.Equal(t, sh.ClientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
 
 	ncs.Close()
 }
@@ -31,17 +32,19 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 func TestExecute(t *testing.T) {
 
 	ts := NewTestNetconfServer(t)
-	assert.Nil(t, ts.LastReq(), "No requests should have been executed")
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
+
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Nil(t, sh.LastReq(), "No requests should have been executed")
 
 	reply, err := ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
-	assert.Equal(t, 1, ts.ReqCount(), "Expected request count to be 1")
-	assert.Equal(t, "get", ts.LastReq().XMLName.Local, "Expected GET request")
-	assert.Equal(t, "<response/>", ts.LastReq().Body, "Expected request body")
+	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
+	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
+	assert.Equal(t, "<response/>", sh.LastReq().Body, "Expected request body")
 }
 
 func TestExecuteWithFailingRequest(t *testing.T) {
@@ -136,6 +139,7 @@ func TestSubscribe(t *testing.T) {
 
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
+	sh := ts.SessionHandler(ncs.ID())
 
 	nch := make(chan *Notification)
 
@@ -152,7 +156,7 @@ func TestSubscribe(t *testing.T) {
 	assert.NotNil(t, reply, "create-subscription failed")
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
-	ts.SendNotification(notificationEvent())
+	sh.SendNotification(notificationEvent())
 
 	// Wait for notification.
 	wg.Wait()
@@ -163,8 +167,8 @@ func TestSubscribe(t *testing.T) {
 	assert.Equal(t, notificationEvent(), result.Event, "Unexpected event XML")
 
 	// Get server to send notifications, wait a while for them to arrive and confirm they've been dropped.
-	ts.SendNotification(notificationEvent())
-	ts.SendNotification(notificationEvent())
+	sh.SendNotification(notificationEvent())
+	sh.SendNotification(notificationEvent())
 	time.Sleep(time.Millisecond * time.Duration(500))
 	assert.Equal(t, uint64(2), atomic.LoadUint64(&(ncs.(*sesImpl).notificationDropCount)), "Expected notification to have been dropped")
 
@@ -190,10 +194,12 @@ func TestConcurrentExecute(t *testing.T) {
 				assert.NoError(t, err, "Not expecting exec to fail")
 				assert.Equal(t, replybody, reply.Data, "Reply should contain response data")
 			}
+
 		}(r)
 	}
 	wg.Wait()
-	assert.Equal(t, 1000, ts.ReqCount(), "Unexpected request count")
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Equal(t, 1000, sh.ReqCount(), "Unexpected request count")
 }
 
 func TestConcurrentExecuteAsync(t *testing.T) {
@@ -220,8 +226,8 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 		}(r)
 	}
 	wg.Wait()
-
-	assert.Equal(t, 1000, ts.ReqCount(), "Unexpected request count")
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Equal(t, 1000, sh.ReqCount(), "Unexpected request count")
 }
 
 func BenchmarkExecute(b *testing.B) {

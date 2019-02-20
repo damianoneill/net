@@ -88,8 +88,8 @@ func TestTrace(t *testing.T) {
 			traces = append(traces, fmt.Sprintf("ConnectDone %s error:%v", target, err))
 			assert.True(t, d > 0, "Duration should be defined")
 		},
-		ConnectionClosed: func(err error) {
-			traces = append(traces, fmt.Sprintf("ConnectionClosed error:%v", err))
+		ConnectionClosed: func(target string, err error) {
+			traces = append(traces, fmt.Sprintf("ConnectionClosed target:%s error:%v", target, err))
 		},
 		ReadStart: func(p []byte) {
 			traces = append(traces, "ReadStart called")
@@ -122,5 +122,5 @@ func TestTrace(t *testing.T) {
 	assert.Equal(t, "WriteDone Message\n 8 <nil>", traces[3])
 	assert.Equal(t, "ReadStart called", traces[4])
 	assert.Equal(t, "ReadDone GOT:Message\n 12 <nil>", traces[5])
-	assert.Equal(t, fmt.Sprintf("ConnectionClosed error:<nil>"), traces[6])
+	assert.Contains(t, traces[6], fmt.Sprintf("ConnectionClosed target:localhost:"), traces[6])
 }
