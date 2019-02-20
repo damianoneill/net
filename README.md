@@ -23,7 +23,7 @@ The library includes support for the following cross-cutting concerns through de
 * Metrics
 * Configuration
 
-The transport layer is externalized from the Library using dependency injection, allowing the user to choose and configure as their specific environment requires.  [Go Examples]() are included for demonstation purposes.
+The transport layer is externalized from the Library using dependency injection, allowing the user to choose and configure as their specific environment requires.  [Go Examples](https://github.com/damianoneill/net/blob/master/netconf/example_test.go) are included for demonstation purposes.
 
 The package can be downloaded with the following command
 
