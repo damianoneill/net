@@ -94,7 +94,7 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	assert.NotNil(t, reply, "Execute failed unexpectedly")
 
 	rch := make(chan *RPCReply)
-	s.ExecuteAsync(Request("<get/>"), rch)
+	_ = s.ExecuteAsync(Request("<get/>"), rch)
 	reply = <-rch
 	assert.NotNil(t, reply, "ExecuteAsync failed unexpectedly")
 

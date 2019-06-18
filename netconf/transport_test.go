@@ -63,7 +63,7 @@ func TestWriteRead(t *testing.T) {
 	defer tr.Close()
 
 	rdr := bufio.NewReader(tr)
-	tr.Write([]byte("Message\n"))
+	_, _ = tr.Write([]byte("Message\n"))
 	response, _ := rdr.ReadString('\n')
 	assert.Equal(t, "GOT:Message\n", response, "Failed to get expected response")
 }
@@ -79,7 +79,7 @@ func TestTrace(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	traces := []string{}
+	var traces []string
 	trace := &ClientTrace{
 		ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
 			traces = append(traces, fmt.Sprintf("ConnectStart %s", target))
@@ -111,8 +111,8 @@ func TestTrace(t *testing.T) {
 	ctx := WithClientTrace(context.Background(), trace)
 	tr, _ := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), "netconf")
 
-	tr.Write([]byte("Message\n"))
-	bufio.NewReader(tr).ReadString('\n')
+	_, _ = tr.Write([]byte("Message\n"))
+	_, _ = bufio.NewReader(tr).ReadString('\n')
 
 	tr.Close()
 
