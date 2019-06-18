@@ -95,9 +95,9 @@ func TestExecuteAsync(t *testing.T) {
 	rch1 := make(chan *RPCReply)
 	rch2 := make(chan *RPCReply)
 	rch3 := make(chan *RPCReply)
-	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
-	ncs.ExecuteAsync(Request(`<get><test2/></get>`), rch2)
-	ncs.ExecuteAsync(Request(`<get><test3/></get>`), rch3)
+	_ = ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+	_ = ncs.ExecuteAsync(Request(`<get><test2/></get>`), rch2)
+	_ = ncs.ExecuteAsync(Request(`<get><test3/></get>`), rch3)
 
 	reply := <-rch3
 	assert.NotNil(t, reply, "Reply should not be nil")
@@ -116,7 +116,7 @@ func TestExecuteAsyncUnfulfilled(t *testing.T) {
 	defer ncs.Close()
 
 	rch1 := make(chan *RPCReply)
-	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+	_ = ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
 
 	reply := <-rch1
 	assert.Nil(t, reply, "Reply should be nil")
@@ -128,7 +128,7 @@ func TestExecuteAsyncInterrupted(t *testing.T) {
 	defer ncs.Close()
 
 	rch1 := make(chan *RPCReply)
-	ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+	_ = ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
 
 	time.AfterFunc(time.Second*time.Duration(2), func() { ncs.Close() })
 	reply := <-rch1
@@ -235,7 +235,7 @@ func BenchmarkExecute(b *testing.B) {
 	ncs := newNCClientSession(b, NewTestNetconfServer(b))
 
 	for n := 0; n < b.N; n++ {
-		ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+		_, _ = ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
 	}
 }
 
@@ -245,7 +245,7 @@ func BenchmarkTemplateParallel(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+			_, _ = ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
 		}
 	})
 }
@@ -272,37 +272,37 @@ func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
 
 // Simple real NE access tests
 
-// func TestRealNewSession(t *testing.T) {
+func TestRealNewSession(t *testing.T) {
 
-// 	sshConfig := &ssh.ClientConfig{
-// 		User:            "XXxxx",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
-// 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-// 	}
+	sshConfig := &ssh.ClientConfig{
+		User:            "regress",
+		Auth:            []ssh.AuthMethod{ssh.Password("MaRtInI")},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
 
-// 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
-// 	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
-// 	assert.NoError(t, err, "Not expecting new transport to fail")
-// 	defer tr.Close()
+	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
+	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("10.228.63.5:%d", 830), "netconf")
+	assert.NoError(t, err, "Not expecting new transport to fail")
+	defer tr.Close()
 
-// 	ncs, err := NewSession(ctx, tr, defaultConfig)
-// 	assert.NoError(t, err, "Not expecting new session to fail")
-// 	assert.NotNil(t, ncs, "Session should be non-nil")
+	ncs, err := NewSession(ctx, tr, defaultConfig)
+	assert.NoError(t, err, "Not expecting new session to fail")
+	assert.NotNil(t, ncs, "Session should be non-nil")
 
-// 	var wg sync.WaitGroup
-// 	for n := 0; n < 1; n++ {
-// 		wg.Add(1)
-// 		go func(z int) {
-// 			defer wg.Done()
-// 			for c := 0; c < 1; c++ {
-// 				reply, err := ncs.Execute(Request(`<get/>`))
-// 				assert.NoError(t, err, "Not expecting exec to fail")
-// 				assert.NotNil(t, reply, "Reply should be non-nil")
-// 			}
-// 		}(n)
-// 	}
-// 	wg.Wait()
-// }
+	var wg sync.WaitGroup
+	for n := 0; n < 1; n++ {
+		wg.Add(1)
+		go func(z int) {
+			defer wg.Done()
+			for c := 0; c < 1; c++ {
+				reply, err := ncs.Execute(Request(`<get/>`))
+				assert.NoError(t, err, "Not expecting exec to fail")
+				assert.NotNil(t, reply, "Reply should be non-nil")
+			}
+		}(n)
+	}
+	wg.Wait()
+}
 
 // func TestRealSubscription(t *testing.T) {
 

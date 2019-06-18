@@ -11,7 +11,7 @@ var EOM = string(tokenEOM)
 func TestEOMDecoding(t *testing.T) {
 
 	type decresp struct {
-		inputs      []string
+		inputs []string
 		buffer string
 		err    error
 	}
@@ -23,23 +23,23 @@ func TestEOMDecoding(t *testing.T) {
 	}{
 		{"MessageWithEOM", 100,
 			[]decresp{
-				{[]string{"123456_abcde" + EOM},"123456_abcde", nil},
-				{[]string{"XYZ1" + EOM} ,"XYZ1", nil},
+				{[]string{"123456_abcde" + EOM}, "123456_abcde", nil},
+				{[]string{"XYZ1" + EOM}, "XYZ1", nil},
 				{nil, "", io.EOF},
 			},
 		},
 		{"SeparatePayload_EOM", 100,
 			[]decresp{
 				{[]string{"123456_abcde", EOM}, "123456_abcde", nil},
-				{[]string{"XYZ1", EOM},"XYZ1", nil},
-				{nil,"", io.EOF},
+				{[]string{"XYZ1", EOM}, "XYZ1", nil},
+				{nil, "", io.EOF},
 			},
 		},
 		{"MessageSplitOverBuffer", 7,
 			[]decresp{
-				{ []string{"1234567"},"1234567", nil},
+				{[]string{"1234567"}, "1234567", nil},
 				{[]string{"AB", EOM}, "AB", nil},
-				{[]string{"abcdefg"},"abcdefg", nil},
+				{[]string{"abcdefg"}, "abcdefg", nil},
 				{[]string{"h", EOM}, "h", nil},
 				{nil, "", io.EOF},
 			},
@@ -48,26 +48,26 @@ func TestEOMDecoding(t *testing.T) {
 
 			[]decresp{
 				{[]string{"1234567890" + EOM}, "12345678", nil},
-				{nil,"90", nil},
+				{nil, "90", nil},
 			},
 		},
 		{"PartialEOM", 100,
 			[]decresp{
-				{ []string{"1234]]>]]XYZ" + EOM}, "1234]]>]]XYZ", nil},
+				{[]string{"1234]]>]]XYZ" + EOM}, "1234]]>]]XYZ", nil},
 				{nil, "", io.EOF},
 			},
 		},
 		{"SmallWrites", 100,
 			[]decresp{
-				{ []string{"AB", "CD", "EF"}, "ABCDEF", nil},
-				{ []string{"G", EOM}, "G", nil},
+				{[]string{"AB", "CD", "EF"}, "ABCDEF", nil},
+				{[]string{"G", EOM}, "G", nil},
 				{nil, "", io.EOF},
 			},
 		},
 		{"MissingEOM", 100,
 			[]decresp{
 				{[]string{"ABCDEF"}, "ABCDEF", nil},
-				{nil,"", io.ErrUnexpectedEOF},
+				{nil, "", io.ErrUnexpectedEOF},
 			},
 		},
 	}
@@ -81,7 +81,7 @@ func TestEOMDecoding(t *testing.T) {
 
 			buffer := make([]byte, tt.buflen)
 			for i, resp := range tt.responses {
-				transport.Write(resp.inputs, i == len(tt.responses) - 1)
+				transport.Write(resp.inputs, i == len(tt.responses)-1)
 
 				count, err := d.Read(buffer)
 				token := string(buffer[:count])
@@ -99,7 +99,7 @@ func TestEOMDecoding(t *testing.T) {
 func TestFramerTransition(t *testing.T) {
 
 	type decresp struct {
-		inputs      []string
+		inputs     []string
 		buffer     string
 		err        string
 		setChunked bool
@@ -114,14 +114,14 @@ func TestFramerTransition(t *testing.T) {
 		{"SimpleSwitch", 100,
 			[]decresp{
 				{[]string{"<hello/>" + EOM}, "<hello/>", "", true},
-				{[]string{"\n#6\n", "<rpc/>", "\n##\n"},"<rpc/>", "", false}, // Multiple writes
+				{[]string{"\n#6\n", "<rpc/>", "\n##\n"}, "<rpc/>", "", false}, // Multiple writes
 				{nil, "", "EOF", false},
 			},
 		},
 		{"SwitchWithDanglingEOM", 100,
 			[]decresp{
 				{[]string{"<hello/>"}, "<hello/>", "", true},
-				{[]string{EOM + "\n#6\n" + "<rpc/>" + "\n##\n"}, "<rpc/>", "", false},  // Single write
+				{[]string{EOM + "\n#6\n" + "<rpc/>" + "\n##\n"}, "<rpc/>", "", false}, // Single write
 				{nil, "", "EOF", false},
 			},
 		},
@@ -137,14 +137,14 @@ func TestFramerTransition(t *testing.T) {
 			buffer := make([]byte, tt.buflen)
 			for i, resp := range tt.responses {
 
-				transport.Write(resp.inputs, i == len(tt.responses) - 1)
+				transport.Write(resp.inputs, i == len(tt.responses)-1)
 
 				count, err := d.Read(buffer)
 				token := string(buffer[:count])
 				if resp.buffer != token {
 					t.Errorf("Decoder %s[%d]: buffer mismatch wanted >%s< got >%s<", tt.name, i, resp.buffer, token)
 				} else if err == nil && resp.err != "" ||
-					      err != nil && !strings.Contains(err.Error(), resp.err) {
+					err != nil && !strings.Contains(err.Error(), resp.err) {
 					t.Errorf("Decoder %s[%d]: error mismatch wanted %s got %s", tt.name, i, resp.err, err)
 				}
 				if resp.setChunked {
@@ -158,7 +158,7 @@ func TestFramerTransition(t *testing.T) {
 func TestChunkedFramer(t *testing.T) {
 
 	type decresp struct {
-		inputs      []string
+		inputs     []string
 		buffer     string
 		err        string
 		setChunked bool
@@ -188,37 +188,37 @@ func TestChunkedFramer(t *testing.T) {
 		},
 		{"InvalidChunkHeader", 100,
 			[]decresp{
-				{[]string{"\n#A"}, "", "", false},  // Single write
+				{[]string{"\n#A"}, "", "", false}, // Single write
 				{nil, "", "invalid chunk header", false},
 			},
 		},
 		{"ChunkHeaderNotStartingWithNewline1", 100,
 			[]decresp{
-				{[]string{"X"}, "", "", false},  // Single write
+				{[]string{"X"}, "", "", false}, // Single write
 				{nil, "", "invalid chunk header", false},
 			},
 		},
 		{"ChunkHeaderNotStartingWithNewline2", 100,
 			[]decresp{
-				{[]string{"12345678"}, "", "", false},  // Single write
+				{[]string{"12345678"}, "", "", false}, // Single write
 				{nil, "", "invalid chunk header", false},
 			},
 		},
 		{"ChunkHeaderNotStartingWithNewline3", 100,
 			[]decresp{
-				{[]string{"123456789"}, "", "", false},  // Single write
+				{[]string{"123456789"}, "", "", false}, // Single write
 				{nil, "", "invalid chunk header", false},
 			},
 		},
 		{"ChunkHeaderNotStartingWithNewlineHash", 100,
 			[]decresp{
-				{[]string{"\nX"}, "", "", false},  // Single write
+				{[]string{"\nX"}, "", "", false}, // Single write
 				{nil, "", "invalid chunk header", false},
 			},
 		},
 		{"InvalidChunkSize1", 100,
 			[]decresp{
-				{[]string{"\n#4294967297", "\n" + "<rpc/>" + "\n#", "#\n"}, "", "", false},  // Single write
+				{[]string{"\n#4294967297", "\n" + "<rpc/>" + "\n#", "#\n"}, "", "", false}, // Single write
 				{nil, "", "chunk size larger than maximum", false},
 			},
 		},
@@ -230,7 +230,7 @@ func TestChunkedFramer(t *testing.T) {
 		},
 		{"InvalidChunkSize3", 100,
 			[]decresp{
-				{[]string{"\n#4294967297000\n" + "<rpc/>" + "\n#", "#\n"}, "", "", false},  // Single write
+				{[]string{"\n#4294967297000\n" + "<rpc/>" + "\n#", "#\n"}, "", "", false}, // Single write
 				{nil, "", "token too long", false},
 			},
 		},
@@ -246,7 +246,7 @@ func TestChunkedFramer(t *testing.T) {
 			buffer := make([]byte, tt.buflen)
 			for i, resp := range tt.responses {
 
-				transport.Write(resp.inputs, i == len(tt.responses) - 1)
+				transport.Write(resp.inputs, i == len(tt.responses)-1)
 
 				count, err := d.Read(buffer)
 				token := string(buffer[:count])
@@ -264,12 +264,12 @@ func TestChunkedFramer(t *testing.T) {
 	}
 }
 
-func newTransport() (*transport) {
+func newTransport() *transport {
 	pr, pw := io.Pipe()
 	t := &transport{r: pr, w: pw, ch: make(chan string, 5)}
 	go func() {
 		for s := range t.ch {
-			t.w.Write([]byte(s))
+			_, _ = t.w.Write([]byte(s))
 		}
 		t.w.Close()
 	}()
@@ -277,8 +277,8 @@ func newTransport() (*transport) {
 }
 
 type transport struct {
-	r io.Reader
-	w io.WriteCloser
+	r  io.Reader
+	w  io.WriteCloser
 	ch chan string
 }
 
@@ -295,4 +295,3 @@ func (t *transport) Write(inputs []string, shouldClose bool) {
 		}
 	}
 }
-
