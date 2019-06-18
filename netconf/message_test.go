@@ -272,37 +272,37 @@ func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
 
 // Simple real NE access tests
 
-func TestRealNewSession(t *testing.T) {
-
-	sshConfig := &ssh.ClientConfig{
-		User:            "regress",
-		Auth:            []ssh.AuthMethod{ssh.Password("MaRtInI")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
-	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("10.228.63.5:%d", 830), "netconf")
-	assert.NoError(t, err, "Not expecting new transport to fail")
-	defer tr.Close()
-
-	ncs, err := NewSession(ctx, tr, defaultConfig)
-	assert.NoError(t, err, "Not expecting new session to fail")
-	assert.NotNil(t, ncs, "Session should be non-nil")
-
-	var wg sync.WaitGroup
-	for n := 0; n < 1; n++ {
-		wg.Add(1)
-		go func(z int) {
-			defer wg.Done()
-			for c := 0; c < 1; c++ {
-				reply, err := ncs.Execute(Request(`<get/>`))
-				assert.NoError(t, err, "Not expecting exec to fail")
-				assert.NotNil(t, reply, "Reply should be non-nil")
-			}
-		}(n)
-	}
-	wg.Wait()
-}
+//func TestRealNewSession(t *testing.T) {
+//
+//	sshConfig := &ssh.ClientConfig{
+//		User:            "regress",
+//		Auth:            []ssh.AuthMethod{ssh.Password("MaRtInI")},
+//		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+//	}
+//
+//	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
+//	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("10.228.63.5:%d", 830), "netconf")
+//	assert.NoError(t, err, "Not expecting new transport to fail")
+//	defer tr.Close()
+//
+//	ncs, err := NewSession(ctx, tr, defaultConfig)
+//	assert.NoError(t, err, "Not expecting new session to fail")
+//	assert.NotNil(t, ncs, "Session should be non-nil")
+//
+//	var wg sync.WaitGroup
+//	for n := 0; n < 1; n++ {
+//		wg.Add(1)
+//		go func(z int) {
+//			defer wg.Done()
+//			for c := 0; c < 1; c++ {
+//				reply, err := ncs.Execute(Request(`<get/>`))
+//				assert.NoError(t, err, "Not expecting exec to fail")
+//				assert.NotNil(t, reply, "Reply should be non-nil")
+//			}
+//		}(n)
+//	}
+//	wg.Wait()
+//}
 
 // func TestRealSubscription(t *testing.T) {
 
