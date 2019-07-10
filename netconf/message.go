@@ -93,12 +93,12 @@ const (
 func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, error) {
 
 	si := &sesImpl{
-		cfg:   cfg,
-		t:     t,
+		cfg:    cfg,
+		t:      t,
 		target: t.(*tImpl).target,
-		dec:   newDecoder(t),
-		enc:   newEncoder(t),
-		trace: ContextClientTrace(ctx),
+		dec:    newDecoder(t),
+		enc:    newEncoder(t),
+		trace:  ContextClientTrace(ctx),
 
 		hellochan: make(chan bool)}
 
@@ -198,9 +198,13 @@ func (si *sesImpl) ServerCapabilities() []string {
 
 func (si *sesImpl) waitForServerHello() (err error) {
 
+	helloOk := false
 	select {
-	case <-si.hellochan:
+	case helloOk = <-si.hellochan:
 	case <-time.After(time.Duration(si.cfg.setupTimeoutSecs) * time.Second):
+	}
+
+	if !helloOk {
 		err = errors.New("failed to get hello from server")
 	}
 	return
