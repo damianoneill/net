@@ -1,0 +1,3 @@
+     <filter type="subtree">
+       <top xmlns="http://example.com/schema/1.2/config"/>
+     </filter>
