@@ -1,4 +1,4 @@
-package testutil
+package testserver
 
 import (
 	"bufio"
@@ -32,7 +32,7 @@ type HandlerFactory func(t assert.TestingT) SSHHandler
 // The server implements password authentication with the given credentials.
 func NewSSHServer(t assert.TestingT, uname, password string) *SSHServer {
 
-	return NewSSHServerHandler(t, uname, password, func(t assert.TestingT) (SSHHandler) {return &echoer{}})
+	return NewSSHServerHandler(t, uname, password, func(t assert.TestingT) SSHHandler { return &echoer{} })
 }
 
 // NewSSHServerHandler deflivers a new test SSH Server, with a custom channel handler.

@@ -1,16 +1,16 @@
-package netconf
+package testserver
 
 import (
 	"encoding/xml"
 	"sync"
 	"time"
 
+	"github.com/damianoneill/net/v2/netconf/common"
+
+	"github.com/damianoneill/net/v2/netconf/common/codec"
+
 	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
-)
-
-var (
-	nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
 )
 
 // SessionHandler represents the server side of an active netconf SSH session.
@@ -22,8 +22,8 @@ type SessionHandler struct {
 	ch ssh.Channel
 
 	// The codecs used to handle client i/o
-	enc *encoder
-	dec *decoder
+	enc *codec.Encoder
+	dec *codec.Decoder
 
 	// Serialises access to encoder (avoiding contention between sending notifications and request responses).
 	encLock sync.Mutex
@@ -37,7 +37,7 @@ type SessionHandler struct {
 	hellochan chan bool
 
 	// The HelloMessage sent by the connecting client.
-	ClientHello *HelloMessage
+	ClientHello *common.HelloMessage
 
 	// startwg will be signalled when the session is started (specifically after client
 	// capabilities have been received).
@@ -49,13 +49,13 @@ type SessionHandler struct {
 
 	// Records executed requests.
 	reqMutex sync.Mutex
-	Reqs []RPCRequest
+	Reqs     []RPCRequest
 }
 
 // rpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
 // request body is unknown.
 type rpcRequestMessage struct {
-	XMLName   xml.Name 
+	XMLName   xml.Name
 	MessageID string     `xml:"message-id,attr"`
 	Request   RPCRequest `xml:",any"`
 }
@@ -70,12 +70,12 @@ type RPCRequest struct {
 // element type of the reply body (i.e. the content of the data element)
 // is unknown.
 type RPCReplyMessage struct {
-	XMLName   xml.Name   `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
-	Errors    []RPCError `xml:"rpc-error,omitempty"`
-	Data      replyData  `xml:"data"`
-	Ok        bool       `xml:",omitempty"`
-	RawReply  string     `xml:"-"`
-	MessageID string     `xml:"message-id,attr"`
+	XMLName   xml.Name          `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
+	Errors    []common.RPCError `xml:"rpc-error,omitempty"`
+	Data      replyData         `xml:"data"`
+	Ok        bool              `xml:",omitempty"`
+	RawReply  string            `xml:"-"`
+	MessageID string            `xml:"message-id,attr"`
 }
 type replyData struct {
 	XMLName xml.Name `xml:"data"`
@@ -107,7 +107,7 @@ var EchoRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 	reply := &RPCReplyMessage{
 		MessageID: req.MessageID,
-		Errors: []RPCError{
+		Errors: []common.RPCError{
 			{Severity: "error", Message: "oops"}},
 	}
 	err := h.encode(reply)
@@ -116,7 +116,7 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 
 // CloseRequestHandler closes the transport channel on request receipt.
 var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
-	h.ch.Close() // nolint: errcheck, gosec
+	_ = h.ch.Close() // nolint: errcheck, gosec
 }
 
 // IgnoreRequestHandler does in nothing on receipt of a request.
@@ -129,21 +129,21 @@ func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolin
 		sid:          sid,
 		hellochan:    make(chan bool),
 		startwg:      wg,
-		capabilities: DefaultCapabilities,
+		capabilities: common.DefaultCapabilities,
 	}
 }
 
 // Handle establishes a Netconf server session on a newly-connected SSH channel.
 func (h *SessionHandler) Handle(t assert.TestingT, ch ssh.Channel) {
 	h.ch = ch
-	h.dec = newDecoder(ch)
-	h.enc = newEncoder(ch)
+	h.dec = codec.NewDecoder(ch)
+	h.enc = codec.NewEncoder(ch)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
 	// Send server hello to client.
-	err := h.encode(&HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
+	err := h.encode(&common.HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
 	assert.NoError(h.t, err, "Failed to send server hello")
 
 	go h.handleIncomingMessages(wg)
@@ -172,7 +172,7 @@ func (h *SessionHandler) SendNotification(body string) *SessionHandler {
 
 // Close initiates session tear-down by closing the underlying transport channel.
 func (h *SessionHandler) Close() {
-	h.ch.Close() // nolint: errcheck, gosec
+	_ = h.ch.Close() // nolint: errcheck, gosec
 }
 
 func (h *SessionHandler) waitForClientHello() {
@@ -204,10 +204,10 @@ func (h *SessionHandler) handleToken(token xml.Token) {
 	switch token := token.(type) {
 	case xml.StartElement:
 		switch token.Name {
-		case nameHello: // <hello>
+		case common.NameHello: // <hello>
 			h.handleHello(token)
 
-		case nameRPC: // <rpc>
+		case common.NameRPC: // <rpc>
 			h.handleRPC(token)
 
 		default:
@@ -221,10 +221,10 @@ func (h *SessionHandler) handleHello(token xml.StartElement) {
 
 	h.decodeElement(&h.ClientHello, &token)
 
-	if peerSupportsChunkedFraming(h.ClientHello.Capabilities) && peerSupportsChunkedFraming(h.capabilities) {
+	if common.PeerSupportsChunkedFraming(h.ClientHello.Capabilities) && common.PeerSupportsChunkedFraming(h.capabilities) {
 
 		// Update the codec to use chunked framing from now.
-		enableChunkedFraming(h.dec, h.enc)
+		codec.EnableChunkedFraming(h.dec, h.enc)
 	}
 
 	h.hellochan <- true
@@ -258,10 +258,10 @@ func (h *SessionHandler) encode(m interface{}) error {
 	h.encLock.Lock()
 	defer h.encLock.Unlock()
 
-	return h.enc.encode(m)
+	return h.enc.Encode(m)
 }
 
-func (h *SessionHandler) reqLogger(r RPCRequest)  {
+func (h *SessionHandler) reqLogger(r RPCRequest) {
 	h.reqMutex.Lock()
 	defer h.reqMutex.Unlock()
 	h.Reqs = append(h.Reqs, r)

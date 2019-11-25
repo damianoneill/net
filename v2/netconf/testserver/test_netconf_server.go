@@ -1,11 +1,12 @@
-package netconf
+package testserver
 
 import (
 	"fmt"
 	"runtime"
 	"sync/atomic"
 
-	"github.com/damianoneill/net/testutil"
+	"github.com/damianoneill/net/v2/netconf/common"
+
 	assert "github.com/stretchr/testify/require"
 )
 
@@ -19,12 +20,12 @@ const (
 // It encapsulates a transport connection to an SSH server, and a netconf session handler that will
 // be invoked to handle netconf messages.
 type TestNCServer struct {
-	*testutil.SSHServer
+	*SSHServer
 	sessionHandlers map[uint64]*SessionHandler
-	reqHandlers []RequestHandler
-	caps []string
-	nextSid uint64
-	tctx assert.TestingT
+	reqHandlers     []RequestHandler
+	caps            []string
+	nextSid         uint64
+	tctx            assert.TestingT
 }
 
 // NewTestNetconfServer creates a new TestNCServer that will accept Netconf localhost connections on an ephemeral port (available
@@ -34,7 +35,7 @@ type TestNCServer struct {
 // WithRequestHandler methods.
 func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 
-	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler), caps: DefaultCapabilities}
+	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler), caps: common.DefaultCapabilities}
 
 	if tctx == nil {
 		// Default test context to built-in implementation.
@@ -42,13 +43,13 @@ func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 	}
 	ncs.tctx = tctx
 
-	ncs.SSHServer = testutil.NewSSHServerHandler(tctx, TestUserName, TestPassword, ncs.newFactory())
+	ncs.SSHServer = NewSSHServerHandler(tctx, TestUserName, TestPassword, ncs.newFactory())
 
 	return ncs
 }
 
-func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
-	return func(t assert.TestingT) (testutil.SSHHandler) {
+func (ncs *TestNCServer) newFactory() HandlerFactory {
+	return func(t assert.TestingT) SSHHandler {
 		sid := atomic.AddUint64(&ncs.nextSid, 1)
 		sess := newSessionHandler(ncs, sid)
 		ncs.sessionHandlers[sid] = sess
@@ -59,7 +60,7 @@ func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
 }
 
 // LastHandler delivers the most recently instantiated session handler.
-func (ncs *TestNCServer) LastHandler() (*SessionHandler) {
+func (ncs *TestNCServer) LastHandler() *SessionHandler {
 	return ncs.sessionHandlers[ncs.nextSid]
 }
 
@@ -77,7 +78,7 @@ func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
 
 // Close closes any active transport to the test server and prevents subsequent connections.
 func (ncs *TestNCServer) Close() {
-	for k,v := range ncs.sessionHandlers {
+	for k, v := range ncs.sessionHandlers {
 		if v.ch != nil {
 			v.Close() // nolint: gosec, errcheck
 			ncs.sessionHandlers[k] = nil
@@ -99,7 +100,7 @@ func (ncs *TestNCServer) FailNow() {
 }
 
 // SessionHandler delivers the netconf session handler associated with the specified session id.
-func (ncs *TestNCServer) SessionHandler(id uint64) (*SessionHandler) {
+func (ncs *TestNCServer) SessionHandler(id uint64) *SessionHandler {
 	sh, ok := ncs.sessionHandlers[id]
 	if !ok {
 		ncs.tctx.Errorf("Failed to get handler for session %d", id)
@@ -107,4 +108,3 @@ func (ncs *TestNCServer) SessionHandler(id uint64) (*SessionHandler) {
 	}
 	return sh
 }
-

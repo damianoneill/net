@@ -1,4 +1,4 @@
-package netconf
+package common
 
 import (
 	"encoding/xml"
@@ -14,7 +14,7 @@ type Request string
 type HelloMessage struct {
 	XMLName      xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 hello"`
 	Capabilities []string `xml:"capabilities>capability"`
-	SessionID    uint64      `xml:"session-id,omitempty"`
+	SessionID    uint64   `xml:"session-id,omitempty"`
 }
 
 // RPCMessage defines the an rpc request message
@@ -62,3 +62,36 @@ type NotificationMessage struct {
 	EventTime string       `xml:"eventTime"`
 	Event     Notification `xml:",any"`
 }
+
+// DefaultCapabilities sets the default capabilities of the client library
+var DefaultCapabilities = []string{
+	CapBase10,
+	CapBase11,
+}
+
+// Define xml names for different netconf messages.
+var (
+	NameHello        = xml.Name{Space: NetconfNS, Local: "hello"}
+	NameRPC          = xml.Name{Space: NetconfNS, Local: "rpc"}
+	NameRPCReply     = xml.Name{Space: NetconfNS, Local: "rpc-reply"}
+	NameNotification = xml.Name{Space: NetconfNotifyNS, Local: "notification"}
+)
+
+// Define netconf URNs.
+const (
+	NetconfNS       = "urn:ietf:params:xml:ns:netconf:base:1.0"
+	NetconfNotifyNS = "urn:ietf:params:xml:ns:netconf:notification:1.0"
+	CapBase10       = "urn:ietf:params:netconf:base:1.0"
+	CapBase11       = "urn:ietf:params:netconf:base:1.1"
+)
+
+// PeerSupportsChunkedFraming returns true if capability list indicates support for chunked framing.
+func PeerSupportsChunkedFraming(caps []string) bool {
+	for _, capability := range caps {
+		if capability == CapBase11 {
+			return true
+		}
+	}
+	return false
+}
+

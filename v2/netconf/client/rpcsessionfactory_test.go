@@ -1,4 +1,4 @@
-package netconf
+package client
 
 import (
 	"bufio"
@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/damianoneill/net/testutil"
+	"github.com/damianoneill/net/v2/netconf/common"
+	"github.com/damianoneill/net/v2/netconf/testserver"
+
 	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
@@ -23,32 +25,32 @@ func TestTransportFailure(t *testing.T) {
 
 func TestSessionSetupFailure(t *testing.T) {
 
-	ts := testutil.NewSSHServer(t, TestUserName, TestPassword)
+	ts := testserver.NewSSHServer(t, testserver.TestUserName, testserver.TestPassword)
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
-	s, err := NewRPCSessionWithConfig(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	s, err := NewRPCSessionWithConfig(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &Config{setupTimeoutSecs: 1})
 	assert.Error(t, err, "Expecting new session to fail - no hello from server")
 	assert.Nil(t, s, "Session should be nil")
 }
 
 func TestSessionSetupSuccess(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &Config{setupTimeoutSecs: 1})
 	assert.NoError(t, err, "Expecting new session to succeed")
 	assert.NotNil(t, s, "Session should not be nil")
 }
@@ -76,10 +78,14 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	w := bufio.NewWriter(&b)
 	log.SetOutput(w)
 
-	ts := NewTestNetconfServer(t).WithRequestHandler(EchoRequestHandler).WithRequestHandler(EchoRequestHandler).WithRequestHandler(EchoRequestHandler).WithRequestHandler(CloseRequestHandler)
+	ts := testserver.NewTestNetconfServer(t).
+		WithRequestHandler(testserver.EchoRequestHandler).
+		WithRequestHandler(testserver.EchoRequestHandler).
+		WithRequestHandler(testserver.EchoRequestHandler).
+		WithRequestHandler(testserver.CloseRequestHandler)
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -90,15 +96,15 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	s, _ := NewRPCSession(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
 	sh := ts.SessionHandler(s.ID())
 
-	reply, _ := s.Execute(Request("<get/>"))
+	reply, _ := s.Execute(common.Request("<get/>"))
 	assert.NotNil(t, reply, "Execute failed unexpectedly")
 
-	rch := make(chan *RPCReply)
-	_ = s.ExecuteAsync(Request("<get/>"), rch)
+	rch := make(chan *common.RPCReply)
+	_ = s.ExecuteAsync(common.Request("<get/>"), rch)
 	reply = <-rch
 	assert.NotNil(t, reply, "ExecuteAsync failed unexpectedly")
 
-	nch := make(chan *Notification)
+	nch := make(chan *common.Notification)
 	reply, _ = s.Subscribe("<create-subscription/>", nch)
 	assert.NotNil(t, reply, "Subscribe failed unexpectedly")
 
@@ -109,13 +115,13 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 
 	sh.SendNotification("<eventB/>") // Should be dropped
 
-	ts.WithRequestHandler(CloseRequestHandler) // Force error on next request
-	reply, _ = s.Execute(Request("<get/>"))
+	ts.WithRequestHandler(testserver.CloseRequestHandler) // Force error on next request
+	reply, _ = s.Execute(common.Request("<get/>"))
 	assert.Nil(t, reply, "Execute succeeded unexpectedly")
 
 	s.Close()
 
-	w.Flush()
+	_ = w.Flush()
 	return b.String()
 }
 
@@ -123,7 +129,7 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 
 // func TestRealNewSession(t *testing.T) {
 
-// 	sshConfig := &ssh.ClientConfig{
+// 	sshConfig := &ssh.Config{
 // 		User:            "XXxxxx",
 // 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),

@@ -1,4 +1,4 @@
-package netconf
+package client
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string)
 
 // NewRPCSessionWithConfig connects to the  target using the ssh configuration, and establishes
 // a netconf session with the client configuration.
-func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target string, cfg *ClientConfig) (s Session, err error) {
+func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target string, cfg *Config) (s Session, err error) {
 
 	var t Transport
 	if t, err = createTransport(ctx, sshcfg, target); err != nil {

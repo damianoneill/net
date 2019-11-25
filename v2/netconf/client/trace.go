@@ -1,9 +1,11 @@
-package netconf
+package client
 
 import (
 	"context"
 	"log"
 	"time"
+
+	"github.com/damianoneill/net/v2/netconf/common"
 
 	"github.com/imdario/mergo"
 	"golang.org/x/crypto/ssh"
@@ -12,14 +14,14 @@ import (
 // unique type to prevent assignment.
 type clientEventContextKey struct{}
 
-// ContextClientTrace returns the ClientTrace associated with the
+// ContextClientTrace returns the Trace associated with the
 // provided context. If none, it returns nil.
 func ContextClientTrace(ctx context.Context) *ClientTrace {
 	trace, _ := ctx.Value(clientEventContextKey{}).(*ClientTrace)
 	if trace == nil {
 		trace = NoOpLoggingHooks
 	} else {
-		mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+		_ = mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
 	}
 	return trace
 }
@@ -46,7 +48,7 @@ type ClientTrace struct {
 	ConnectDone func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration)
 
 	// HelloDone is called when the hello message has been received from the server.
-	HelloDone func(msg *HelloMessage)
+	HelloDone func(msg *common.HelloMessage)
 
 	// ConnectionClosed is called after a transport connection has been closed, with
 	// err indicating any error condition.
@@ -68,16 +70,16 @@ type ClientTrace struct {
 	Error func(context, target string, err error)
 
 	// NotificationReceived is called when a notification has been received.
-	NotificationReceived func(m *Notification)
+	NotificationReceived func(m *common.Notification)
 
 	// NotificationDropped is called when a notification is dropped because the reader is not ready.
-	NotificationDropped func(m *Notification)
+	NotificationDropped func(m *common.Notification)
 
 	// ExecuteStart is called before the execution of an rpc request.
-	ExecuteStart func(req Request, async bool)
+	ExecuteStart func(req common.Request, async bool)
 
 	// ExecuteDone is called after the execution of an rpc request.
-	ExecuteDone func(req Request, async bool, res *RPCReply, err error, d time.Duration)
+	ExecuteDone func(req common.Request, async bool, res *common.RPCReply, err error, d time.Duration)
 }
 
 // DefaultLoggingHooks provides a default logging hook to report errors.
@@ -98,7 +100,7 @@ var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectionClosed: func(target string, err error) {
 		log.Printf("ConnectionClosed target:%s err:%v\n", target, err)
 	},
-	HelloDone: func(msg *HelloMessage) {
+	HelloDone: func(msg *common.HelloMessage) {
 		log.Printf("HelloDone hello:%v\n", msg)
 	},
 	ReadStart: func(p []byte) {
@@ -117,16 +119,16 @@ var DiagnosticLoggingHooks = &ClientTrace{
 	Error: func(context, target string, err error) {
 		log.Printf("Error context:%s target:%s err:%v\n", context, target, err)
 	},
-	NotificationReceived: func(n *Notification) {
+	NotificationReceived: func(n *common.Notification) {
 		log.Printf("NotificationReceived %s\n", n.XMLName.Local)
 	},
-	NotificationDropped: func(n *Notification) {
+	NotificationDropped: func(n *common.Notification) {
 		log.Printf("NotificationDropped %s\n", n.XMLName.Local)
 	},
-	ExecuteStart: func(req Request, async bool) {
+	ExecuteStart: func(req common.Request, async bool) {
 		log.Printf("ExecuteStart async:%v req:%s\n", async, req)
 	},
-	ExecuteDone: func(req Request, async bool, res *RPCReply, err error, d time.Duration) {
+	ExecuteDone: func(req common.Request, async bool, res *common.RPCReply, err error, d time.Duration) {
 		log.Printf("ExecuteDone async:%v req:%s err:%v took:%dns\n", async, req, err, d)
 	},
 }
@@ -136,7 +138,7 @@ var NoOpLoggingHooks = &ClientTrace{
 	ConnectStart:     func(clientConfig *ssh.ClientConfig, target string) {},
 	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
 	ConnectionClosed: func(target string, err error) {},
-	HelloDone:        func(msg *HelloMessage) {},
+	HelloDone:        func(msg *common.HelloMessage) {},
 	ReadStart:        func(p []byte) {},
 	ReadDone:         func(p []byte, c int, err error, d time.Duration) {},
 
@@ -144,8 +146,8 @@ var NoOpLoggingHooks = &ClientTrace{
 	WriteDone:  func(p []byte, c int, err error, d time.Duration) {},
 
 	Error:                func(context, target string, err error) {},
-	NotificationReceived: func(n *Notification) {},
-	NotificationDropped:  func(n *Notification) {},
-	ExecuteStart:         func(req Request, async bool) {},
-	ExecuteDone:          func(req Request, async bool, res *RPCReply, err error, d time.Duration) {},
+	NotificationReceived: func(n *common.Notification) {},
+	NotificationDropped:  func(n *common.Notification) {},
+	ExecuteStart:         func(req common.Request, async bool) {},
+	ExecuteDone:          func(req common.Request, async bool, res *common.RPCReply, err error, d time.Duration) {},
 }

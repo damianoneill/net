@@ -1,20 +1,23 @@
-package netconf
+package client
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/damianoneill/net/v2/netconf/common"
+	"github.com/damianoneill/net/v2/netconf/testserver"
+
 	"golang.org/x/crypto/ssh"
 )
 
 func ExampleSession_Execute() {
 
-	ts := NewTestNetconfServer(nil)
+	ts := testserver.NewTestNetconfServer(nil)
 
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -26,7 +29,7 @@ func ExampleSession_Execute() {
 		return
 	}
 
-	r, err := s.Execute(Request("<get><expectResponse/></get>"))
+	r, err := s.Execute(common.Request("<get><expectResponse/></get>"))
 	if err != nil {
 		fmt.Printf("Failed to execute RPC:%s\n", err)
 		return
@@ -40,21 +43,21 @@ func ExampleSession_Execute() {
 
 func ExampleSession_ExecuteAsync() {
 
-	ts := NewTestNetconfServer(nil)
+	ts := testserver.NewTestNetconfServer(nil)
 
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
 	s, _ := NewRPCSession(context.Background(), sshConfig, serverAddress)
 
-	rch1 := make(chan *RPCReply)
-	_ = s.ExecuteAsync(Request("<get><expectResponse1/></get>"), rch1)
-	rch2 := make(chan *RPCReply)
-	_ = s.ExecuteAsync(Request("<get><expectResponse2/></get>"), rch2)
+	rch1 := make(chan *common.RPCReply)
+	_ = s.ExecuteAsync(common.Request("<get><expectResponse1/></get>"), rch1)
+	rch2 := make(chan *common.RPCReply)
+	_ = s.ExecuteAsync(common.Request("<get><expectResponse2/></get>"), rch2)
 
 	r := <-rch2
 	fmt.Printf("%s\n", r.Data)
@@ -69,11 +72,11 @@ func ExampleSession_ExecuteAsync() {
 
 func ExampleSession_Subscribe() {
 
-	ts := NewTestNetconfServer(nil)
+	ts := testserver.NewTestNetconfServer(nil)
 
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -81,8 +84,8 @@ func ExampleSession_Subscribe() {
 	s, _ := NewRPCSession(context.Background(), sshConfig, serverAddress)
 	sh := ts.SessionHandler(s.ID())
 
-	nch := make(chan *Notification)
-	_, _ = s.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
+	nch := make(chan *common.Notification)
+	_, _ = s.Subscribe(common.Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
 
 	// Get test server to send a notification in 500ms.
 	time.AfterFunc(time.Millisecond*time.Duration(500), func() {

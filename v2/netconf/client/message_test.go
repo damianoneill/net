@@ -1,4 +1,4 @@
-package netconf
+package client
 
 import (
 	"context"
@@ -8,37 +8,40 @@ import (
 	"testing"
 	"time"
 
+	"github.com/damianoneill/net/v2/netconf/common"
+	"github.com/damianoneill/net/v2/netconf/testserver"
+
 	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
 
 func TestNewSessionWithChunkedEncoding(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	sh := ts.SessionHandler(ncs.ID())
 
 	assert.NotNil(t, ncs, "Session should be non-nil")
 	assert.Equal(t, uint64(1), ncs.ID(), "Session id not defined correctly")
-	assert.Contains(t, ncs.ServerCapabilities(), CapBase10, "Failed to retrieve expected capabilities")
+	assert.Contains(t, ncs.ServerCapabilities(), common.CapBase10, "Failed to retrieve expected capabilities")
 
 	sh.WaitStart()
 	assert.NotNil(t, sh.ClientHello, "Should have sent hello")
-	assert.Equal(t, sh.ClientHello.Capabilities, DefaultCapabilities, "Did not send expected server capabilities")
+	assert.Equal(t, sh.ClientHello.Capabilities, common.DefaultCapabilities, "Did not send expected server capabilities")
 
 	ncs.Close()
 }
 
 func TestExecute(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
 
 	sh := ts.SessionHandler(ncs.ID())
 	assert.Nil(t, sh.LastReq(), "No requests should have been executed")
 
-	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	reply, err := ncs.Execute(common.Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
@@ -49,10 +52,10 @@ func TestExecute(t *testing.T) {
 
 func TestExecuteWithFailingRequest(t *testing.T) {
 
-	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(FailingRequestHandler))
+	ncs := newNCClientSession(t, testserver.NewTestNetconfServer(t).WithRequestHandler(testserver.FailingRequestHandler))
 	defer ncs.Close()
 
-	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	reply, err := ncs.Execute(common.Request(`<get><response/></get>`))
 	assert.Error(t, err, "Expecting exec to fail")
 	assert.Equal(t, "netconf rpc [error] 'oops'", err.Error(), "Expected error")
 	assert.NotNil(t, reply, "Reply should be non-nil")
@@ -60,7 +63,7 @@ func TestExecuteWithFailingRequest(t *testing.T) {
 
 func TestExecuteFailure(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
 
@@ -68,7 +71,7 @@ func TestExecuteFailure(t *testing.T) {
 	ts.Close()
 	time.Sleep(time.Millisecond * time.Duration(250))
 
-	reply, err := ncs.Execute(Request(`<get><response/></get>`))
+	reply, err := ncs.Execute(common.Request(`<get><response/></get>`))
 	assert.Error(t, err, "Expecting exec to fail")
 	assert.Equal(t, "EOF", err.Error(), "Expected EOF error")
 	assert.Nil(t, reply, "Reply should be nil")
@@ -76,11 +79,11 @@ func TestExecuteFailure(t *testing.T) {
 
 func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
 
-	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithCapabilities([]string{CapBase10}))
+	ncs := newNCClientSession(t, testserver.NewTestNetconfServer(t).WithCapabilities([]string{common.CapBase10}))
 
-	assert.False(t, peerSupportsChunkedFraming(ncs.(*sesImpl).hello.Capabilities), "Server not expected to support chunked framing")
+	assert.False(t, common.PeerSupportsChunkedFraming(ncs.(*sesImpl).hello.Capabilities), "Server not expected to support chunked framing")
 
-	reply, _ := ncs.Execute(Request(`<get><response/></get>`))
+	reply, _ := ncs.Execute(common.Request(`<get><response/></get>`))
 	assert.NotNil(t, reply, "Reply should be non-nil")
 	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
 
@@ -89,15 +92,15 @@ func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
 
 func TestExecuteAsync(t *testing.T) {
 
-	ncs := newNCClientSession(t, NewTestNetconfServer(t))
+	ncs := newNCClientSession(t, testserver.NewTestNetconfServer(t))
 	defer ncs.Close()
 
-	rch1 := make(chan *RPCReply)
-	rch2 := make(chan *RPCReply)
-	rch3 := make(chan *RPCReply)
-	_ = ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
-	_ = ncs.ExecuteAsync(Request(`<get><test2/></get>`), rch2)
-	_ = ncs.ExecuteAsync(Request(`<get><test3/></get>`), rch3)
+	rch1 := make(chan *common.RPCReply)
+	rch2 := make(chan *common.RPCReply)
+	rch3 := make(chan *common.RPCReply)
+	_ = ncs.ExecuteAsync(common.Request(`<get><test1/></get>`), rch1)
+	_ = ncs.ExecuteAsync(common.Request(`<get><test2/></get>`), rch2)
+	_ = ncs.ExecuteAsync(common.Request(`<get><test3/></get>`), rch3)
 
 	reply := <-rch3
 	assert.NotNil(t, reply, "Reply should not be nil")
@@ -112,11 +115,11 @@ func TestExecuteAsync(t *testing.T) {
 
 func TestExecuteAsyncUnfulfilled(t *testing.T) {
 
-	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(CloseRequestHandler))
+	ncs := newNCClientSession(t, testserver.NewTestNetconfServer(t).WithRequestHandler(testserver.CloseRequestHandler))
 	defer ncs.Close()
 
-	rch1 := make(chan *RPCReply)
-	_ = ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+	rch1 := make(chan *common.RPCReply)
+	_ = ncs.ExecuteAsync(common.Request(`<get><test1/></get>`), rch1)
 
 	reply := <-rch1
 	assert.Nil(t, reply, "Reply should be nil")
@@ -124,11 +127,11 @@ func TestExecuteAsyncUnfulfilled(t *testing.T) {
 
 func TestExecuteAsyncInterrupted(t *testing.T) {
 
-	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(IgnoreRequestHandler))
+	ncs := newNCClientSession(t, testserver.NewTestNetconfServer(t).WithRequestHandler(testserver.IgnoreRequestHandler))
 	defer ncs.Close()
 
-	rch1 := make(chan *RPCReply)
-	_ = ncs.ExecuteAsync(Request(`<get><test1/></get>`), rch1)
+	rch1 := make(chan *common.RPCReply)
+	_ = ncs.ExecuteAsync(common.Request(`<get><test1/></get>`), rch1)
 
 	time.AfterFunc(time.Second*time.Duration(2), func() { ncs.Close() })
 	reply := <-rch1
@@ -137,22 +140,22 @@ func TestExecuteAsyncInterrupted(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	sh := ts.SessionHandler(ncs.ID())
 
-	nch := make(chan *Notification)
+	nch := make(chan *common.Notification)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	// Capture notification that we expect.
-	var result *Notification
+	var result *common.Notification
 	go func() {
 		result = <-nch
 		wg.Done()
 	}()
 
-	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
+	reply, _ := ncs.Subscribe(common.Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
 	assert.NotNil(t, reply, "create-subscription failed")
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
@@ -179,7 +182,7 @@ func TestSubscribe(t *testing.T) {
 
 func TestConcurrentExecute(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 
 	var wg sync.WaitGroup
@@ -190,7 +193,7 @@ func TestConcurrentExecute(t *testing.T) {
 			request := fmt.Sprintf(`<get><Id_%d/></get>`, id)
 			replybody := fmt.Sprintf(`<data><Id_%d/></data>`, id)
 			for i := 0; i < 100; i++ {
-				reply, err := ncs.Execute(Request(request))
+				reply, err := ncs.Execute(common.Request(request))
 				assert.NoError(t, err, "Not expecting exec to fail")
 				assert.Equal(t, replybody, reply.Data, "Reply should contain response data")
 			}
@@ -204,7 +207,7 @@ func TestConcurrentExecute(t *testing.T) {
 
 func TestConcurrentExecuteAsync(t *testing.T) {
 
-	ts := NewTestNetconfServer(t)
+	ts := testserver.NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 
 	var wg sync.WaitGroup
@@ -214,9 +217,9 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 			defer wg.Done()
 			request := fmt.Sprintf(`<get><Id_%d/></get>`, id)
 			replybody := fmt.Sprintf(`<data><Id_%d/></data>`, id)
-			rchan := make(chan *RPCReply)
+			rchan := make(chan *common.RPCReply)
 			for i := 0; i < 100; i++ {
-				err := ncs.ExecuteAsync(Request(request), rchan)
+				err := ncs.ExecuteAsync(common.Request(request), rchan)
 				assert.NoError(t, err, "Not expecting exec to fail")
 				reply := <-rchan
 
@@ -232,20 +235,20 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 
 func BenchmarkExecute(b *testing.B) {
 
-	ncs := newNCClientSession(b, NewTestNetconfServer(b))
+	ncs := newNCClientSession(b, testserver.NewTestNetconfServer(b))
 
 	for n := 0; n < b.N; n++ {
-		_, _ = ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+		_, _ = ncs.Execute(common.Request(`<get-config><source><running/></source></get-config>`))
 	}
 }
 
 func BenchmarkTemplateParallel(b *testing.B) {
 
-	ncs := newNCClientSession(b, NewTestNetconfServer(b))
+	ncs := newNCClientSession(b, testserver.NewTestNetconfServer(b))
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = ncs.Execute(Request(`<get-config><source><running/></source></get-config>`))
+			_, _ = ncs.Execute(common.Request(`<get-config><source><running/></source></get-config>`))
 		}
 	})
 }
@@ -258,11 +261,11 @@ func notificationEvent() string {
 		`</netconf-session-start>`
 }
 
-func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
+func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session {
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
 	sshConfig := &ssh.ClientConfig{
-		User:            TestUserName,
-		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	s, err := NewRPCSession(context.Background(), sshConfig, serverAddress)
@@ -274,7 +277,7 @@ func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
 
 //func TestRealNewSession(t *testing.T) {
 //
-//	sshConfig := &ssh.ClientConfig{
+//	sshConfig := &ssh.Config{
 //		User:            "regress",
 //		Auth:            []ssh.AuthMethod{ssh.Password("MaRtInI")},
 //		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -306,7 +309,7 @@ func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
 
 // func TestRealSubscription(t *testing.T) {
 
-// 	sshConfig := &ssh.ClientConfig{
+// 	sshConfig := &ssh.Config{
 // 		User:            "XXxxxx",
 // 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxxx")},
 // 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),

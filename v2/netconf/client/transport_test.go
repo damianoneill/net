@@ -1,4 +1,4 @@
-package netconf
+package client
 
 import (
 	"bufio"
@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/damianoneill/net/testutil"
+	"github.com/damianoneill/net/v2/netconf/testserver"
 	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
 
 func TestSuccessfulConnection(t *testing.T) {
 
-	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
+	ts := testserver.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
@@ -31,7 +31,7 @@ func TestSuccessfulConnection(t *testing.T) {
 
 func TestFailingConnection(t *testing.T) {
 
-	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
+	ts := testserver.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
@@ -48,7 +48,7 @@ func TestFailingConnection(t *testing.T) {
 
 func TestWriteRead(t *testing.T) {
 
-	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
+	ts := testserver.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
@@ -70,7 +70,7 @@ func TestWriteRead(t *testing.T) {
 
 func TestTrace(t *testing.T) {
 
-	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
+	ts := testserver.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
