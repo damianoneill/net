@@ -12,7 +12,7 @@ import (
 // a netconf session with default configuration.
 func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
 
-	return NewRPCSessionWithConfig(ctx, sshcfg, target, defaultConfig)
+	return NewRPCSessionWithConfig(ctx, sshcfg, target, DefaultConfig)
 }
 
 // NewRPCSessionWithConfig connects to the  target using the ssh configuration, and establishes

@@ -12,7 +12,7 @@ import (
 
 	"github.com/damianoneill/net/v2/netconf/common/codec"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"io"
 	"sync"
@@ -142,7 +142,7 @@ func (si *sesImpl) ExecuteAsync(req common.Request, rchan chan *common.RPCReply)
 func (si *sesImpl) execute(req common.Request, rchan chan *common.RPCReply) (err error) {
 
 	// Build the request to be submitted.
-	msg := &common.RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
+	msg := &common.RPCMessage{MessageID: uuid.NewV4().String(), Union: common.GetUnion(req)}
 
 	// Lock the request channel, so the request and response channel set up is atomic.
 	si.reqLock.Lock()
@@ -182,7 +182,7 @@ func (si *sesImpl) waitForServerHello() (err error) {
 
 	select {
 	case <-si.hellochan:
-	case <-time.After(time.Duration(si.cfg.setupTimeoutSecs) * time.Second):
+	case <-time.After(time.Duration(si.cfg.SetupTimeoutSecs) * time.Second):
 		err = errors.New("failed to get hello from server")
 	}
 	return

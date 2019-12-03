@@ -8,7 +8,7 @@ import (
 // Defines structs representing netconf messages and notifications.
 
 // Request represents the body of a Netconf RPC request.
-type Request string
+type Request interface{}
 
 // HelloMessage defines the message sent/received during session negotiation.
 type HelloMessage struct {
@@ -21,7 +21,7 @@ type HelloMessage struct {
 type RPCMessage struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
 	MessageID string   `xml:"message-id,attr"`
-	Methods   []byte   `xml:",innerxml"`
+	*Union
 }
 
 // RPCReply defines the an rpc request message
@@ -63,10 +63,25 @@ type NotificationMessage struct {
 	Event     Notification `xml:",any"`
 }
 
+type Union struct {
+	ValueStr interface{}
+	ValueXml string `xml:",innerxml"`
+}
+
+func GetUnion(s interface{}) *Union {
+	switch request := s.(type) {
+	case string:
+		return &Union{ValueXml: request}
+	default:
+		return &Union{ValueStr: request}
+	}
+}
+
 // DefaultCapabilities sets the default capabilities of the client library
 var DefaultCapabilities = []string{
 	CapBase10,
 	CapBase11,
+	CapXpath,
 }
 
 // Define xml names for different netconf messages.
@@ -83,6 +98,7 @@ const (
 	NetconfNotifyNS = "urn:ietf:params:xml:ns:netconf:notification:1.0"
 	CapBase10       = "urn:ietf:params:netconf:base:1.0"
 	CapBase11       = "urn:ietf:params:netconf:base:1.1"
+	CapXpath        = "urn:ietf:params:netconf:capability:xpath:1.0"
 )
 
 // PeerSupportsChunkedFraming returns true if capability list indicates support for chunked framing.
@@ -94,4 +110,3 @@ func PeerSupportsChunkedFraming(caps []string) bool {
 	}
 	return false
 }
-
