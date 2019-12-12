@@ -19,7 +19,7 @@ type Namespace struct {
 type OpSession interface {
 	client.Session
 
-	// GetReq issues a GET request, with the supplied subtree filter and stores the response in the result, which
+	// GetSubtree issues a GET request, with the supplied subtree filter and stores the response in the result, which
 	// should be the address of either:
 	// - a string, in which case it will hold the response body, or
 	// - a struct with xml tags.

@@ -4,9 +4,11 @@ import "encoding/xml"
 
 const (
 	// Configuration Datastores
-	RunningCfg   = "running"
-	CandidateCfg = "candidate"
-	StartupCfg   = "startup"
+	RunningCfg     = "running"
+	CandidateCfg   = "candidate"
+	StartupCfg     = "startup"
+	IntendedCfg    = "intended"
+	OperationalCfg = "operational"
 
 	// Edit Config Error Options
 	StopOnErrorErrOpt     = "stop-on-error"
