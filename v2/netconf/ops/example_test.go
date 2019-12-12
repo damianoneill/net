@@ -12,21 +12,19 @@ import (
 
 func ExampleSession_GetSubTreeUsingStrings() {
 
-	ts := testserver.NewTestNetconfServer(nil)
+	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-
-	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
-	s, err := NewSession(context.Background(), sshConfig, serverAddress)
-
+	s, err := NewSession(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
 	if err != nil {
 		fmt.Printf("Failed to start session %s\n", err)
 		return
 	}
+	defer s.Close()
 
 	response := ""
 	err = s.GetSubtree("<top><sub/></top>", &response)
@@ -38,71 +36,68 @@ func ExampleSession_GetSubTreeUsingStrings() {
 
 	s.Close()
 
-	// Output: <filter type="subtree"><top><sub/></top></filter>
+	// Output: <top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>
 }
 
 func ExampleSession_GetSubTreeUsingStructs() {
 
-	ts := testserver.NewTestNetconfServer(nil)
+	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-
-	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
-	s, err := NewSession(context.Background(), sshConfig, serverAddress)
-
+	s, err := NewSession(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
 	if err != nil {
 		fmt.Printf("Failed to start session %s\n", err)
 		return
+	}
+	defer s.Close()
+
+	type testSub struct {
+		XMLName xml.Name `xml:"sub"`
+		Attr    string   `xml:"attr,attr""`
+		Child1  string   `xml:"child1"`
+		Child2  string   `xml:"child2"`
 	}
 
 	type testStruct struct {
 		XMLName xml.Name `xml:"top"`
-		Sub     string   `xml:"sub"`
+		Sub     *testSub
 	}
 
-	type testResponse struct {
-		XMLName xml.Name `xml:"filter"`
-		Type    string   `xml:"type,attr"`
-		Select  string   `xml:"select,attr,omitempty"`
-		SubTree *testStruct
-	}
-	response := &testResponse{}
+	response := &testStruct{}
 
-	err = s.GetSubtree(&testStruct{Sub: "DummyValue"}, response)
+	err = s.GetSubtree(&testStruct{}, response)
 	if err != nil {
 		fmt.Printf("Failed to execute RPC:%s\n", err)
 		return
 	}
-	fmt.Printf("%s\n", response.Type)
-	fmt.Printf("%s\n", response.SubTree.Sub)
+	fmt.Printf("%s\n", response.Sub.Attr)
+	fmt.Printf("%s\n", response.Sub.Child1)
 
 	s.Close()
 
-	// Output: subtree
-	// DummyValue
+	// Output: avalue
+	// cvalue
 }
 
 func ExampleSession_GetXpath() {
 
-	ts := testserver.NewTestNetconfServer(nil)
+	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-
-	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
-	s, err := NewSession(context.Background(), sshConfig, serverAddress)
-
+	s, err := NewSession(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
 	if err != nil {
 		fmt.Printf("Failed to start session %s\n", err)
 		return
 	}
+	defer s.Close()
 
 	response := ""
 	err = s.GetXpath(`/tns:element`, []Namespace{{"tns", "urn:tns"}}, &response)
@@ -114,5 +109,85 @@ func ExampleSession_GetXpath() {
 
 	s.Close()
 
-	// Output: <filter xmlns:tns="urn:tns" type="xpath" select="/tns:element"/>
+	// Output: <top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>
+}
+
+func ExampleSession_GetConfig() {
+
+	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
+
+	sshConfig := &ssh.ClientConfig{
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	s, err := NewSession(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
+	if err != nil {
+		fmt.Printf("Failed to start session %s\n", err)
+		return
+	}
+	defer s.Close()
+
+	type testSub struct {
+		XMLName xml.Name `xml:"sub"`
+		Attr    string   `xml:"attr,attr""`
+		Child1  string   `xml:"child1"`
+		Child2  string   `xml:"child2"`
+	}
+
+	type subCfg struct {
+		XMLName xml.Name `xml:"top"`
+		Sub     *testSub
+	}
+
+	response := &subCfg{}
+
+	err = s.GetConfigSubtree(&subCfg{}, CandidateCfg, response)
+	if err != nil {
+		fmt.Printf("Failed to execute RPC:%s\n", err)
+		return
+	}
+	fmt.Printf("%s\n", response.Sub.Attr)
+	fmt.Printf("%s\n", response.Sub.Child1)
+
+	s.Close()
+
+	// Output: cfgval1
+	// cfgval2
+}
+
+func ExampleSession_EditConfig() {
+
+	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
+
+	sshConfig := &ssh.ClientConfig{
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	s, err := NewSession(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()))
+	if err != nil {
+		fmt.Printf("Failed to start session %s\n", err)
+		return
+	}
+	defer s.Close()
+
+	type testSub struct {
+		XMLName xml.Name `xml:"sub"`
+		Attr    string   `xml:"attr,attr""`
+		Child1  string   `xml:"child1"`
+		Child2  string   `xml:"child2"`
+	}
+
+	type subCfg struct {
+		XMLName xml.Name `xml:"top"`
+		Sub     *testSub
+	}
+
+	err = s.EditConfig(CandidateCfg, Cfg(` <top><sub attr="newval1"><child1>newval2</child1></sub></top>`))
+	if err != nil {
+		fmt.Printf("Failed to execute RPC:%s\n", err)
+		return
+	}
+	// Output:
 }

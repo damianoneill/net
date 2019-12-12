@@ -122,6 +122,28 @@ var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 // IgnoreRequestHandler does in nothing on receipt of a request.
 var IgnoreRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {}
 
+// SmartRequesttHandler responds to common requests with trivial content.
+var SmartRequesttHandler = func(h *SessionHandler, req *rpcRequestMessage) {
+
+	data := replyData{Data: responseFor(req)}
+	reply := &RPCReplyMessage{Data: data, MessageID: req.MessageID}
+	err := h.encode(reply)
+	assert.NoError(h.t, err, "Failed to encode response")
+}
+
+func responseFor(req *rpcRequestMessage) string {
+	switch req.Request.XMLName.Local {
+	case "get":
+		return `<top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>`
+	case "get-config":
+		return `<top><sub attr="cfgval1"><child1>cfgval2</child1></sub></top>`
+	case "edit-config":
+		return `<ok/>`
+	default:
+		return req.Request.Body
+	}
+}
+
 func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
