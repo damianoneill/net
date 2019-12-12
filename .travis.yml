@@ -17,5 +17,5 @@ before_script:
 
 script:
   - ./bin/golangci-lint run
-  - go test -v -timeout 120s -race  github.com/damianoneill/net/v2/... -coverprofile=coverage.out # Run all the tests with the race detector enabled
+  - go test -v -timeout 120s -race  $(go list github.com/damianoneill/net/v2/... | grep -v testserver) -coverprofile=coverage.out # Run all the tests with the race detector enabled
   - goveralls -coverprofile=coverage.out -service travis-ci
