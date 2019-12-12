@@ -17,7 +17,7 @@ type HelloMessage struct {
 	SessionID    uint64   `xml:"session-id,omitempty"`
 }
 
-// RPCMessage defines the an rpc request message
+// RPCMessage defines an rpc request message
 type RPCMessage struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
 	MessageID string   `xml:"message-id,attr"`

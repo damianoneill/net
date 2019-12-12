@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -48,6 +49,29 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
 	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
 	assert.Equal(t, "<response/>", sh.LastReq().Body, "Expected request body")
+}
+
+func TestExecuteWithStruct(t *testing.T) {
+
+	ts := testserver.NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
+	defer ncs.Close()
+
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Nil(t, sh.LastReq(), "No requests should have been executed")
+
+	type req struct {
+		XMLName xml.Name `xml:"get"`
+		Body    string   `xml:"body"`
+	}
+
+	reply, err := ncs.Execute(common.Request(&req{}))
+	assert.NoError(t, err, "Not expecting exec to fail")
+	assert.NotNil(t, reply, "Reply should be non-nil")
+	assert.Equal(t, `<data><body></body></data>`, reply.Data, "Reply should contain response data")
+	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
+	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
+	assert.Equal(t, "<body></body>", sh.LastReq().Body, "Expected request body")
 }
 
 func TestExecuteWithFailingRequest(t *testing.T) {
