@@ -315,7 +315,7 @@ func TestGetSchema(t *testing.T) {
 
 	ncs, mcli := newOpsSessionWithMockClient(t)
 	mcli.On("Execute", createGetShemaRequest("id", "vsn", "yang")).
-		Return(&common.RPCReply{Data: `Some Yang`}, nil)
+		Return(&common.RPCReply{Data: `<data>Some Yang</data>`}, nil)
 
 	reply, err := ncs.GetSchema("id", "vsn", "yang")
 	assert.NoError(t, err, "Not expecting exec to fail")
@@ -463,6 +463,7 @@ type Element struct {
 //
 //	assert.NoError(t, err, "Not expecting exec to fail")
 //	assert.NotNil(t, reply, "Reply should be non-nil")
+//  fmt.Println(reply)
 //}
 //
 //func TestRealKillSession(t *testing.T) {

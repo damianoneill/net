@@ -156,7 +156,7 @@ func ExampleSession_GetConfig() {
 	// cfgval2
 }
 
-func ExampleSession_EditConfig() {
+func ExampleSession_GetSchema() {
 
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
@@ -172,22 +172,16 @@ func ExampleSession_EditConfig() {
 	}
 	defer s.Close()
 
-	type testSub struct {
-		XMLName xml.Name `xml:"sub"`
-		Attr    string   `xml:"attr,attr""`
-		Child1  string   `xml:"child1"`
-		Child2  string   `xml:"child2"`
-	}
-
-	type subCfg struct {
-		XMLName xml.Name `xml:"top"`
-		Sub     *testSub
-	}
-
-	err = s.EditConfig(CandidateCfg, Cfg(` <top><sub attr="newval1"><child1>newval2</child1></sub></top>`))
+	schema, err := s.GetSchema("id", "version", "yang")
 	if err != nil {
 		fmt.Printf("Failed to execute RPC:%s\n", err)
 		return
 	}
-	// Output:
+	fmt.Println(schema)
+	// Output: module junos-rpc-vpls {
+	//   namespace "http://yang.juniper.net/junos/rpc/vpls";
+	//
+	//   prefix vpls;
+	//
+	//// etc…
 }

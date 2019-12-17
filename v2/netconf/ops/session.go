@@ -166,7 +166,9 @@ func (s *sImpl) GetSchema(id, version, format string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return rply.Data, nil
+	data := &Data{}
+	err = xml.Unmarshal([]byte(rply.Data), data)
+	return data.Content, err
 }
 
 // ConfigOption defines the configuration to be applied by an edit config operation

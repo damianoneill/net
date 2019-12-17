@@ -139,6 +139,14 @@ func responseFor(req *rpcRequestMessage) string {
 		return `<top><sub attr="cfgval1"><child1>cfgval2</child1></sub></top>`
 	case "edit-config":
 		return `<ok/>`
+	case "get-schema":
+		return `module junos-rpc-vpls {
+  namespace "http://yang.juniper.net/junos/rpc/vpls";
+
+  prefix vpls;
+
+// etc…
+`
 	default:
 		return req.Request.Body
 	}
