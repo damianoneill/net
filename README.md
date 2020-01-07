@@ -12,10 +12,7 @@ This package includes:
 
 * Client side support of the NETCONF Protocol defined in [(rfc6241)](https://tools.ietf.org/html/rfc6241).
 * Client side support for NETCONF Notifications defined in [(rc5277)](https://tools.ietf.org/html/rfc5277).
-
-The library does not provide support for the following:
-
-* NETCONF Operations Layer
+* GetSchemas and GetSchema from NETCONF Monitoring defined in [(rfc6022)](https://tools.ietf.org/html/rfc6022).
 
 The library includes support for the following cross-cutting concerns through dependency injection:
 
