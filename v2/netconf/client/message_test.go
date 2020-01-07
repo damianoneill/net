@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -48,6 +49,29 @@ func TestExecute(t *testing.T) {
 	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
 	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
 	assert.Equal(t, "<response/>", sh.LastReq().Body, "Expected request body")
+}
+
+func TestExecuteWithStruct(t *testing.T) {
+
+	ts := testserver.NewTestNetconfServer(t)
+	ncs := newNCClientSession(t, ts)
+	defer ncs.Close()
+
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Nil(t, sh.LastReq(), "No requests should have been executed")
+
+	type req struct {
+		XMLName xml.Name `xml:"get"`
+		Body    string   `xml:"body"`
+	}
+
+	reply, err := ncs.Execute(common.Request(&req{}))
+	assert.NoError(t, err, "Not expecting exec to fail")
+	assert.NotNil(t, reply, "Reply should be non-nil")
+	assert.Equal(t, `<data><body></body></data>`, reply.Data, "Reply should contain response data")
+	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
+	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
+	assert.Equal(t, "<body></body>", sh.LastReq().Body, "Expected request body")
 }
 
 func TestExecuteWithFailingRequest(t *testing.T) {
@@ -277,7 +301,7 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session 
 
 //func TestRealNewSession(t *testing.T) {
 //
-//	sshConfig := &ssh.Config{
+//	sshConfig := &ssh.ClientConfig{
 //		User:            "regress",
 //		Auth:            []ssh.AuthMethod{ssh.Password("MaRtInI")},
 //		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -288,7 +312,7 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session 
 //	assert.NoError(t, err, "Not expecting new transport to fail")
 //	defer tr.Close()
 //
-//	ncs, err := NewSession(ctx, tr, defaultConfig)
+//	ncs, err := NewSession(ctx, tr, DefaultConfig)
 //	assert.NoError(t, err, "Not expecting new session to fail")
 //	assert.NotNil(t, ncs, "Session should be non-nil")
 //
@@ -298,7 +322,7 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session 
 //		go func(z int) {
 //			defer wg.Done()
 //			for c := 0; c < 1; c++ {
-//				reply, err := ncs.Execute(Request(`<get/>`))
+//				reply, err := ncs.Execute(`<get/>`)
 //				assert.NoError(t, err, "Not expecting exec to fail")
 //				assert.NotNil(t, reply, "Reply should be non-nil")
 //			}
@@ -306,39 +330,39 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session 
 //	}
 //	wg.Wait()
 //}
-
-// func TestRealSubscription(t *testing.T) {
-
-// 	sshConfig := &ssh.Config{
-// 		User:            "XXxxxx",
-// 		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxxx")},
-// 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-// 	}
-
-// 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
-
-// 	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
-// 	assert.NoError(t, err, "Not expecting new transport to fail")
-// 	defer tr.Close()
-
-// 	ncs, err := NewSession(ctx, tr, defaultConfig)
-// 	assert.NoError(t, err, "Not expecting new session to fail")
-// 	assert.NotNil(t, ncs, "Session should be non-nil")
-
-// 	nchan := make(chan *Notification)
-// 	reply, err := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nchan)
-// 	assert.NotNil(t, reply, "Reply should be non-nil")
-// 	assert.NoError(t, err, "Not expecting exec to fail")
-
-// 	time.AfterFunc(time.Second*2, func() {
-// 		tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
-// 		assert.NoError(t, err, "Not expecting new transport to fail")
-// 		ns, _ := NewSession(ctx, tr, defaultConfig)
-// 		ns.Close()
-// 	})
-
-// 	n := <-nchan
-
-// 	assert.NotNil(t, n, "Reply should be non-nil")
-// 	fmt.Printf("%v\n", n)
-// }
+//
+//func TestRealSubscription(t *testing.T) {
+//
+//	sshConfig := &ssh.ClientConfig{
+//		User:            "XXxxxx",
+//		Auth:            []ssh.AuthMethod{ssh.Password("XXxxxxxxxx")},
+//		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+//	}
+//
+//	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
+//
+//	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+//	assert.NoError(t, err, "Not expecting new transport to fail")
+//	defer tr.Close()
+//
+//	ncs, err := NewSession(ctx, tr, DefaultConfig)
+//	assert.NoError(t, err, "Not expecting new session to fail")
+//	assert.NotNil(t, ncs, "Session should be non-nil")
+//
+//	nchan := make(chan *common.Notification)
+//	reply, err := ncs.Subscribe(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`, nchan)
+//	assert.NotNil(t, reply, "Reply should be non-nil")
+//	assert.NoError(t, err, "Not expecting exec to fail")
+//
+//	time.AfterFunc(time.Second*2, func() {
+//		tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("172.26.138.57:%d", 830), "netconf")
+//		assert.NoError(t, err, "Not expecting new transport to fail")
+//		ns, _ := NewSession(ctx, tr, DefaultConfig)
+//		ns.Close()
+//	})
+//
+//	n := <-nchan
+//
+//	assert.NotNil(t, n, "Reply should be non-nil")
+//	fmt.Printf("%v\n", n)
+//}
