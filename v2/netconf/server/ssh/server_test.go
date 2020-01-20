@@ -71,6 +71,7 @@ func TestServerListenFailure(t *testing.T) {
 	server, err := NewServer(ctx, "9.9.9.9", 9999, sshcfg, handlerFactory())
 	assert.Nil(t, server)
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "assign requested address")
 }
 
 func TestServerConnectionFailure(t *testing.T) {

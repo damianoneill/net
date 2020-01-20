@@ -20,7 +20,7 @@ type Handler interface {
 	Handle(ch ssh.Channel)
 }
 
-// HandlerFactory is a test function that will deliver an Handler.
+// HandlerFactory is a function that will deliver an Handler.
 type HandlerFactory func(conn *ssh.ServerConn) Handler
 
 // NewServer deflivers a new test SSH Server, with a custom channel handler.

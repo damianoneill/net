@@ -106,9 +106,8 @@ type ReplyData struct {
 type RequestHandler func(h *SessionHandler, req *RpcRequestMessage)
 
 // NewServer creates a new Server that will accept Netconf localhost connections on an ephemeral port (available
-// via Port(), with credentials defined by TestUserName and TestPassword.
-// tctx will be used for handling failures; if the supplied value is nil, a default test context will be used.
-func NewServer(ctx context.Context, address string, port int, cfg *xssh.ServerConfig, sf SessionFactory) (ncs *Server, err error) {
+// via Port()), with credentials defined by the sshcfg configuration.
+func NewServer(ctx context.Context, address string, port int, sshcfg *xssh.ServerConfig, sf SessionFactory) (ncs *Server, err error) {
 
 	trace := ContextNetconfTrace(ctx)
 	if trace.Trace != nil && ssh.ContextSshTrace(ctx) == nil {
@@ -117,7 +116,7 @@ func NewServer(ctx context.Context, address string, port int, cfg *xssh.ServerCo
 
 	ncs = &Server{sessionHandlers: make(map[uint64]*SessionHandler), sf: sf, trace: trace}
 
-	ncs.Server, err = ssh.NewServer(ctx, address, port, cfg, ncs.handlerFactory())
+	ncs.Server, err = ssh.NewServer(ctx, address, port, sshcfg, ncs.handlerFactory())
 	if err != nil {
 		return nil, err
 	}

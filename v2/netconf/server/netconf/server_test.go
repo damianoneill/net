@@ -45,8 +45,8 @@ func responseFor(req *RpcRequestMessage) string {
 		return `<top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>`
 	case "get-config":
 		return `<top><sub attr="cfgval1"><child1>cfgval2</child1></sub></top>`
-	case "edit-config":
-		return `<ok/>`
+	//case "edit-config":
+	//	etc...
 	default:
 		return req.Request.Body
 	}
