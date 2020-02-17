@@ -3,7 +3,7 @@ module github.com/damianoneill/net
 go 1.13
 
 require (
-	github.com/damianoneill/net/v2 v2.1.0 // indirect
+	github.com/damianoneill/net/v2 v2.2.0 // indirect
 	github.com/imdario/mergo v0.3.8
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0

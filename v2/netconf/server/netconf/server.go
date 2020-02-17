@@ -77,6 +77,7 @@ type RpcRequestMessage struct {
 	XMLName   xml.Name
 	MessageID string     `xml:"message-id,attr"`
 	Request   RPCRequest `xml:",any"`
+	Body      string     `xml:",innerxml"`
 }
 
 // RPCRequest describes an RPC request.

@@ -58,6 +58,11 @@ type OpSession interface {
 	// - CfgUrl(url), in which case the configuration is defined by a <url> element.
 	EditConfig(target string, config ConfigOption, options ...EditOption) error
 
+	// EditConfigCfg issues an edit-config request defined by config to be applied to the target configuration.
+	// EditOptions can be added to qualify the operation.
+	// Convenience method to avoid complications with function arguments when using EditConfig() with a mock object
+	EditConfigCfg(target string, config interface{}, options ...EditOption) error
+
 	// CopyConfig issues a copy-config request.
 	// source and target are defined by a CfgDsOpt, which can be one of:
 	// - DsName(name) where name defines the configuration data store name (Running, Candidate ...)
@@ -113,6 +118,10 @@ func (s *sImpl) GetConfigXpath(xpath string, nslist []Namespace, source string, 
 func (s *sImpl) EditConfig(target string, config ConfigOption, options ...EditOption) error {
 	_, err := s.Session.Execute(createEditConfigRequest(target, config, options...))
 	return err
+}
+
+func (s *sImpl) EditConfigCfg(target string, config interface{}, options ...EditOption) error {
+	return s.EditConfig(target, Cfg(config), options...)
 }
 
 func (s *sImpl) CopyConfig(source, target CfgDsOpt) error {
