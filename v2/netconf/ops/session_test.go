@@ -191,6 +191,17 @@ func TestEditConfigOptions(t *testing.T) {
 	mcli.AssertExpectations(t)
 }
 
+func TestEditConfigCfg(t *testing.T) {
+
+	ncs, mcli := newOpsSessionWithMockClient(t)
+	mcli.On("Execute", createEditConfigRequest(CandidateCfg, Cfg(`<configuration/>`))).Return(&common.RPCReply{}, nil)
+
+	err := ncs.EditConfigCfg(CandidateCfg, `<configuration/>`)
+	assert.NoError(t, err, "Not expecting call to fail")
+
+	mcli.AssertExpectations(t)
+}
+
 func TestCopyConfig(t *testing.T) {
 
 	ncs, mcli := newOpsSessionWithMockClient(t)
