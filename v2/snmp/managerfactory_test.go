@@ -38,7 +38,7 @@ func TestNewManagerOptions(t *testing.T) {
 
 func TestConnectionFailure(t *testing.T) {
 	f := NewFactory()
-	m, err := f.NewManager(context.Background(), "localhost:0")
+	m, err := f.NewManager(context.Background(), "nosuchhost:161")
 	assert.Error(t, err, "Expecting new session to fail - invalid port")
 	assert.Nil(t, m, "Session should be nil")
 }
