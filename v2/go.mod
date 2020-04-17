@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/damianoneill/net v0.1.2
+	github.com/golang/mock v1.4.3
 	github.com/imdario/mergo v0.3.8
 	github.com/pkg/errors v0.8.1
 	github.com/satori/go.uuid v1.2.0
