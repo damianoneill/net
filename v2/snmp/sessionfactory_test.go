@@ -10,14 +10,14 @@ import (
 
 func TestNewManagerSuccess(t *testing.T) {
 	f := NewFactory()
-	m, err := f.NewManager(context.Background(), "localhost:161")
+	m, err := f.NewSession(context.Background(), "localhost:161")
 	assert.NoError(t, err)
 	assert.NotNil(t, m, "Session should not be nil")
 }
 
 func TestNewManagerOptions(t *testing.T) {
 	f := NewFactory()
-	m, err := f.NewManager(context.Background(), "localhost:161",
+	m, err := f.NewSession(context.Background(), "localhost:161",
 		Network("udp"),
 		Timeout(time.Second),
 		Retries(5),
@@ -27,7 +27,7 @@ func TestNewManagerOptions(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, m, "Session should not be nil")
-	impl := m.(*managerImpl)
+	impl := m.(*sessionImpl)
 	assert.Equal(t, "localhost:161", impl.config.address)
 	assert.Equal(t, "udp", impl.config.network)
 	assert.Equal(t, time.Second, impl.config.timeout)
@@ -38,7 +38,7 @@ func TestNewManagerOptions(t *testing.T) {
 
 func TestConnectionFailure(t *testing.T) {
 	f := NewFactory()
-	m, err := f.NewManager(context.Background(), "nosuchhost:161")
+	m, err := f.NewSession(context.Background(), "nosuchhost:161")
 	assert.Error(t, err, "Expecting new session to fail - invalid port")
 	assert.Nil(t, m, "Session should be nil")
 }
