@@ -94,9 +94,9 @@ func LoggingHooks(trace *ManagerTrace) ManagerOption {
 type SNMPVersion int
 
 const (
-	SNMPV1 SNMPVersion = iota
-	SNMPV2C
-	SNMPV3
+	SNMPV1  SNMPVersion = 0
+	SNMPV2C SNMPVersion = 1
+	SNMPV3  SNMPVersion = 3
 )
 
 // Deliver a new network connection to the address defined in the configuration.

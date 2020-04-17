@@ -47,7 +47,7 @@ type Varbind struct {
 	Value interface{}
 }
 type packet struct {
-	Version     int
+	Version     SNMPVersion
 	Community   []byte
 	RequestType asn1.RawValue
 }
@@ -74,7 +74,6 @@ func (m *managerImpl) Get(ctx context.Context, oids []string) (*Response, error)
 	}
 
 	p := packet{
-		Version:     1,
 		Community:   []byte("private"),
 		RequestType: asn1.RawValue{Tag: 0x00, IsCompound: true, Class: 2, Bytes: b[2:]},
 	}
