@@ -73,9 +73,12 @@ func (m *managerImpl) Get(ctx context.Context, oids []string) (*Response, error)
 		return nil, err
 	}
 
+	b[0] = 0xA0 // GetRequest
+
 	p := packet{
+		Version:     m.config.version,
 		Community:   []byte("private"),
-		RequestType: asn1.RawValue{Tag: 0x00, IsCompound: true, Class: 2, Bytes: b[2:]},
+		RequestType: asn1.RawValue{FullBytes: b},
 	}
 
 	b, err = asn1.Marshal(p)
