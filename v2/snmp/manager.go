@@ -20,7 +20,7 @@ type Manager interface {
 	GetNext(ctx context.Context, oids []string) (*PDU, error)
 
 	// Issues an SNMP GET BULK request for the specified oids.
-	GetBulk(ctx context.Context, oids []string, nonRepeaters int, maxRepetitions int) (*Response, error)
+	GetBulk(ctx context.Context, oids []string, nonRepeaters int, maxRepetitions int) (*PDU, error)
 
 	// Issues an SNMP GET BULK request starting from the specified oid, invoking the function walker for each PDU.
 	GetWalk(ctx context.Context, oid string, walker Walker) error
@@ -65,18 +65,18 @@ type messageType byte
 
 const getMessage = 0xA0
 const getNextMessage = 0xA1
+const getBulkMessage = 0xA5
 
 func (m *managerImpl) Get(ctx context.Context, oids []string) (*PDU, error) {
-	return m.executeGet(ctx, getMessage, oids)
+	return m.executeGet(ctx, getMessage, 0, 0, oids)
 }
 
 func (m *managerImpl) GetNext(ctx context.Context, oids []string) (*PDU, error) {
-	return m.executeGet(ctx, getNextMessage, oids)
+	return m.executeGet(ctx, getNextMessage, 0, 0, oids)
 }
 
-func (m *managerImpl) GetBulk(ctx context.Context, oids []string, nonRepeaters int, maxRepetitions int) (*Response, error) {
-	// TODO
-	return nil, nil
+func (m *managerImpl) GetBulk(ctx context.Context, oids []string, nonRepeaters, maxRepetitions int) (*PDU, error) {
+	return m.executeGet(ctx, getBulkMessage, nonRepeaters, maxRepetitions, oids)
 }
 
 func (m *managerImpl) GetWalk(ctx context.Context, oid string, walker Walker) error {
@@ -84,7 +84,7 @@ func (m *managerImpl) GetWalk(ctx context.Context, oid string, walker Walker) er
 	return nil
 }
 
-func (m *managerImpl) executeGet(ctx context.Context, mType messageType, oids []string) (*PDU, error) {
+func (m *managerImpl) executeGet(ctx context.Context, mType messageType, nonRepeaters, maxRepetitions int, oids []string) (*PDU, error) {
 	ctx, cancel := context.WithTimeout(ctx, m.config.timeout)
 	defer cancel()
 	deadline, _ := ctx.Deadline()
@@ -93,7 +93,7 @@ func (m *managerImpl) executeGet(ctx context.Context, mType messageType, oids []
 		return nil, err
 	}
 
-	b, err := m.buildPacket(oids, mType)
+	b, err := m.buildPacket(oids, mType, nonRepeaters, maxRepetitions)
 	if err != nil {
 		return nil, err
 	}
@@ -152,15 +152,17 @@ func (m *managerImpl) parseResponse(input []byte) (*PDU, error) {
 	return pdu, nil
 }
 
-func (m *managerImpl) buildPacket(oids []string, mType messageType) ([]byte, error) {
-	pdu1 := PDU{
+func (m *managerImpl) buildPacket(oids []string, mType messageType, nonRepeaters, maxRepetitions int) ([]byte, error) {
+	pdu := PDU{
 		RequestID:   m.nextID(),
-		Error:       0,
-		ErrorIndex:  0,
 		VarbindList: buildVarbindList(oids),
 	}
 
-	b, err := ber.Marshal(pdu1)
+	if mType == getBulkMessage {
+		pdu.Error = nonRepeaters
+		pdu.ErrorIndex = maxRepetitions
+	}
+	b, err := ber.Marshal(pdu)
 	if err != nil {
 		return nil, err
 	}

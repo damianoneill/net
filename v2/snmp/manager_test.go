@@ -172,13 +172,126 @@ func TestGetNext(t *testing.T) {
 	assert.Equal(t, "FastEthernet1/0/0", string(value.([]uint8)))
 }
 
+func TestGetBulk(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockConn := mocks.NewMockConn(mockCtrl)
+
+	getRequest := []byte{
+		// Message Type = Sequence, Length = 53
+		0x30, 0x35,
+		// Version Type = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Community String Type = Octet String, Length = 6, Value = public
+		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
+		// PDU Type = GetBulkRequest, Length = 40
+		0xa5, 0x28,
+		// Request ID Type = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Non-Repeaters = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Max Repetitions Type = Integer, Length = 1, Value = 3
+		0x02, 0x01, 0x03,
+		// Varbind List Type = Sequence, Length = 29
+		0x30, 0x1d,
+		// Varbind Type = Sequence, Length = 12
+		0x30, 0x0c,
+		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.4.0
+		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x04, 0x00,
+		// Value Type = Null, Length = 0
+		0x05, 0x00,
+		// Varbind Type = Sequence, Length = 13
+		0x30, 0x0d,
+		// Object Identifier Type = Object Identifier, Length = 9, Value = 1.3.6.1.2.1.2.2.1.2
+		0x06, 0x09, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x02, 0x02, 0x01, 0x02,
+		// Value Type = Null, Length = 0
+		0x05, 0x00,
+	}
+
+	getResponse := []byte{
+		// Message Type = Sequence, Length = 149
+		0x30, 0x82, 0x00, 0x95,
+		// Version Type = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Community String Type = Octet String, Length = 6, Value = public
+		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
+		// PDU Type = GetResponse, Length = 134
+		0xa2, 0x82, 0x00, 0x86,
+		// Request ID Type = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Error Type = Integer, Length = 1, Value = 0
+		0x02, 0x01, 0x00,
+		// Error Index Type = Integer, Length = 1, Value = 0
+		0x02, 0x01, 0x00,
+		// Varbind List Type = Sequence, Length = 121
+		0x30, 0x82, 0x00, 0x79,
+
+		// Varbind Type = Sequence, Length = 22
+		0x30, 0x82, 0x00, 0x16,
+		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.5.0
+		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x05, 0x00,
+		// Value Type = Octet String, Length = 10, Value = cisco-7513
+		0x04, 0x0a, 0x63, 0x69, 0x73, 0x63, 0x6f, 0x2d, 0x37, 0x35, 0x31, 0x33,
+
+		// Varbind Type = Sequence, Length = 21
+		0x30, 0x82, 0x00, 0x15,
+		// Object Identifier Type = Object Identifier, Length = 10, Value = 1.3.6.1.2.1.2.2.1.2.1
+		0x06, 0x0a, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x02, 0x02, 0x01, 0x02, 0x01,
+		// Value Type = Octet String, Length = 7, Value = Fddi0/0
+		0x04, 0x07, 0x46, 0x64, 0x64, 0x69, 0x30, 0x2f, 0x30,
+
+		// Varbind Type = Sequence, Length = 31
+		0x30, 0x82, 0x00, 0x1f,
+		// Object Identifier Type = Object Identifier, Length = 10, Value = 1.3.6.1.2.1.2.2.1.2.2
+		0x06, 0x0a, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x02, 0x02, 0x01, 0x02, 0x02,
+		// Value Type = Octet String, Length = 17, Value = FastEthernet1/0/0
+		0x04, 0x11, 0x46, 0x61, 0x73, 0x74, 0x45, 0x74, 0x68, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x31, 0x2f, 0x30, 0x2f, 0x30,
+
+		// Varbind Type = Sequence, Length = 31
+		0x30, 0x82, 0x00, 0x1f,
+		// Object Identifier Type = Object Identifier, Length = 10, Value = 1.3.6.1.2.1.2.2.1.2.3
+		0x06, 0x0a, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x02, 0x02, 0x01, 0x02, 0x03,
+		// Value Type = Octet String, Length = 17, Value = FastEthernet1/1/0
+		0x04, 0x11, 0x46, 0x61, 0x73, 0x74, 0x45, 0x74, 0x68, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x31, 0x2f, 0x31, 0x2f, 0x30,
+	}
+
+	gomock.InOrder(
+		mockConn.EXPECT().SetDeadline(gomock.Any()).Return(nil),
+		mockConn.EXPECT().Write(getRequest).Return(55, nil),
+		mockConn.EXPECT().Read(gomock.Any()).DoAndReturn(
+			func(input []byte) (int, error) {
+				copy(input, getResponse)
+				return len(getResponse), nil
+			}),
+	)
+
+	config := defaultConfig
+	config.address = "localhost:161"
+	config.community = "public"
+	config.trace = DiagnosticLoggingHooks
+	m := &managerImpl{config: &config, conn: mockConn, nextRequestID: 1}
+
+	pdu, err := m.GetBulk(context.Background(), []string{"1.3.6.1.2.1.1.4.0", "1.3.6.1.2.1.2.2.1.2"}, 1, 3)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, pdu)
+	assert.Len(t, pdu.VarbindList, 4)
+	vbs := pdu.VarbindList
+	assert.Equal(t, "1.3.6.1.2.1.1.5.0", vbs[0].OID.String())
+	assert.Equal(t, "cisco-7513", string(vbs[0].Value.([]uint8)))
+
+	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.1", vbs[1].OID.String())
+	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.2", vbs[2].OID.String())
+	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.3", vbs[3].OID.String())
+	assert.Equal(t, "Fddi0/0", string(vbs[1].Value.([]uint8)))
+	assert.Equal(t, "FastEthernet1/0/0", string(vbs[2].Value.([]uint8)))
+	assert.Equal(t, "FastEthernet1/1/0", string(vbs[3].Value.([]uint8)))
+}
+
 func TestNoOpImplementations(t *testing.T) {
 	m, err := NewFactory().NewManager(context.Background(), "localhost:161")
 	assert.NoError(t, err)
-
-	r, err := m.GetBulk(context.Background(), []string{"1.3.6.1.2.1.2.2.1.1"}, 5, 10)
-	assert.Nil(t, r)
-	assert.Nil(t, err)
 
 	walker := func(p *PDU) error {
 		return nil
@@ -220,4 +333,28 @@ func TestNoOpImplementations(t *testing.T) {
 //	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.2", oid.String())
 //	value := pdu.VarbindList[0].Value
 //	assert.Equal(t, "FastEthernet1/0/0", string(value.([]uint8)))
+//}
+//
+//func TestRealGetBulk(t *testing.T) {
+//
+//	m, err := NewFactory().NewManager(context.Background(), "snmp.live.gambitcommunications.com:161",
+//		LoggingHooks(DiagnosticLoggingHooks))
+//	assert.NoError(t, err)
+//
+//	m.(*managerImpl).nextRequestID = 1
+//	pdu, err := m.GetBulk(context.Background(), []string{"1.3.6.1.2.1.1.4.0", "1.3.6.1.2.1.2.2.1.2"}, 1, 3)
+//
+//	assert.NoError(t, err)
+//	assert.NotNil(t, pdu)
+//	assert.Len(t, pdu.VarbindList, 4)
+//	vbs := pdu.VarbindList
+//	assert.Equal(t, "1.3.6.1.2.1.1.5.0", vbs[0].OID.String())
+//	assert.Equal(t, "cisco-7513", string(vbs[0].Value.([]uint8)))
+//
+//	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.1", vbs[1].OID.String())
+//	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.2", vbs[2].OID.String())
+//	assert.Equal(t, "1.3.6.1.2.1.2.2.1.2.3", vbs[3].OID.String())
+//	assert.Equal(t, "Fddi0/0", string(vbs[1].Value.([]uint8)))
+//	assert.Equal(t, "FastEthernet1/0/0", string(vbs[2].Value.([]uint8)))
+//	assert.Equal(t, "FastEthernet1/1/0", string(vbs[3].Value.([]uint8)))
 //}
