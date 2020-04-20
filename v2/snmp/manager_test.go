@@ -110,13 +110,15 @@ func TestRealGet(t *testing.T) {
 	m, err := NewFactory().NewManager(context.Background(), "snmp.live.gambitcommunications.com:161")
 	assert.NoError(t, err)
 
-	pdu, err := m.Get(context.Background(), []string{"1.3.6.1.2.1.1.5.0"})
+	pdu, err := m.Get(context.Background(), []string{"1.3.6.1.2.1.1.5.0", "1.3.6.1.2.1.1.7.0"})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, pdu)
-	assert.Len(t, pdu.VarbindList, 1)
-	value := pdu.VarbindList[0].Value
-	assert.Equal(t, "cisco-7513", string(value.([]uint8)))
+	assert.Len(t, pdu.VarbindList, 2)
+	value1 := pdu.VarbindList[0].Value
+	assert.Equal(t, "cisco-7513", string(value1.([]uint8)))
+	value2 := pdu.VarbindList[1].Value
+	assert.Equal(t, int64(78), value2.(int64))
 }
 
 func TestRealGetNext(t *testing.T) {

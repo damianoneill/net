@@ -182,7 +182,7 @@ func (m *managerImpl) nextID() (id int32) {
 func buildVarbindList(oids []string) []Varbind {
 	vbl := make([]Varbind, len(oids))
 	for i := 0; i < len(oids); i++ {
-		vbl[i] = Varbind{OID: oidToInts(oids[0]), Value: asn1.NullRawValue}
+		vbl[i] = Varbind{OID: oidToInts(oids[i]), Value: asn1.NullRawValue}
 	}
 	return vbl
 }
