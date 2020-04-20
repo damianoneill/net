@@ -3,18 +3,21 @@ package snmp
 import (
 	"context"
 	"encoding/asn1"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/geoffgarside/ber"
 )
 
 // Manager provides an interface for SNMP device management.
 type Manager interface {
 	// Issues an SNMP GET request for the specified oids.
-	Get(ctx context.Context, oids []string) (*Response, error)
+	Get(ctx context.Context, oids []string) (*PDU, error)
 
 	// Issues an SNMP GET NEXT request for the specified oids.
-	GetNext(ctx context.Context, oids []string) (*Response, error)
+	GetNext(ctx context.Context, oids []string) (*PDU, error)
 
 	// Issues an SNMP GET BULK request for the specified oids.
 	GetBulk(ctx context.Context, oids []string, nonRepeaters int, maxRepetitions int) (*Response, error)
@@ -32,14 +35,18 @@ type Response struct {
 // If the function returns an error, the walk will be terminated.
 type Walker func(pdu *PDU) error
 
-// PDU defines ...
+// PDU defines an SNMP PDU.
 type PDU struct {
-	// TBD
+	RequestID   int32
+	Error       int
+	ErrorIndex  int
+	VarbindList []Varbind
 }
 
 type managerImpl struct {
-	conn   net.Conn
-	config *managerConfig
+	conn          net.Conn
+	config        *managerConfig
+	nextRequestID int32
 }
 
 type Varbind struct {
@@ -52,50 +59,19 @@ type packet struct {
 	RequestType asn1.RawValue
 }
 
-type pdu struct {
-	RequestID   int
-	Error       int
-	ErrorIndex  int
-	VarbindList []Varbind
+const maxInputBufferSize = 65535
+
+type messageType byte
+
+const getMessage = 0xA0
+const getNextMessage = 0xA1
+
+func (m *managerImpl) Get(ctx context.Context, oids []string) (*PDU, error) {
+	return m.executeGet(ctx, getMessage, oids)
 }
 
-func (m *managerImpl) Get(ctx context.Context, oids []string) (*Response, error) {
-
-	pdu1 := pdu{
-		RequestID:   1,
-		Error:       0,
-		ErrorIndex:  0,
-		VarbindList: buildVarbindList(oids),
-	}
-
-	b, err := asn1.Marshal(pdu1)
-	if err != nil {
-		return nil, err
-	}
-
-	b[0] = 0xA0 // GetRequest
-
-	p := packet{
-		Version:     m.config.version,
-		Community:   []byte("private"),
-		RequestType: asn1.RawValue{FullBytes: b},
-	}
-
-	b, err = asn1.Marshal(p)
-	if err != nil {
-		return nil, err
-	}
-	//for i := range b {
-	//	fmt.Printf("%02x ", b[i])
-	//}
-
-	m.conn.Write(b)
-	return nil, nil
-}
-
-func (m *managerImpl) GetNext(ctx context.Context, oids []string) (*Response, error) {
-	// TODO
-	return nil, nil
+func (m *managerImpl) GetNext(ctx context.Context, oids []string) (*PDU, error) {
+	return m.executeGet(ctx, getNextMessage, oids)
 }
 
 func (m *managerImpl) GetBulk(ctx context.Context, oids []string, nonRepeaters int, maxRepetitions int) (*Response, error) {
@@ -106,6 +82,101 @@ func (m *managerImpl) GetBulk(ctx context.Context, oids []string, nonRepeaters i
 func (m *managerImpl) GetWalk(ctx context.Context, oid string, walker Walker) error {
 	// TODO
 	return nil
+}
+
+func (m *managerImpl) executeGet(ctx context.Context, mType messageType, oids []string) (*PDU, error) {
+	ctx, cancel := context.WithTimeout(ctx, m.config.timeout)
+	defer cancel()
+	deadline, _ := ctx.Deadline()
+	err := m.conn.SetDeadline(deadline)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := m.buildPacket(oids, mType)
+	if err != nil {
+		return nil, err
+	}
+
+	n, err := m.conn.Write(b)
+	if err != nil {
+		return nil, err
+	}
+
+	input, err := m.readResponse(n, err)
+	if err != nil {
+		// TODO Handle EOF
+		return nil, err
+	}
+
+	return m.parseResponse(input)
+}
+
+func (m *managerImpl) readResponse(n int, err error) ([]byte, error) {
+	input := make([]byte, maxInputBufferSize)
+
+	n, err = m.conn.Read(input[:])
+
+	if err != nil {
+		return nil, err
+	}
+
+	if n == maxInputBufferSize {
+		// Never expect this to happen
+		panic(fmt.Errorf("overflowing response buffer"))
+	}
+	return input, nil
+}
+
+func (m *managerImpl) parseResponse(input []byte) (*PDU, error) {
+
+	pkt := &packet{}
+
+	_, err := ber.Unmarshal(input, pkt)
+
+	// Replace SNMP PDU Type with ASN1 sequence tag.
+	pkt.RequestType.FullBytes[0] = 0x30
+
+	pdu := &PDU{}
+	_, err = ber.Unmarshal(pkt.RequestType.FullBytes, pdu)
+	if err != nil {
+		return nil, err
+	}
+	return pdu, nil
+}
+
+func (m *managerImpl) buildPacket(oids []string, mType messageType) ([]byte, error) {
+	pdu1 := PDU{
+		RequestID:   m.nextID(),
+		Error:       0,
+		ErrorIndex:  0,
+		VarbindList: buildVarbindList(oids),
+	}
+
+	b, err := ber.Marshal(pdu1)
+	if err != nil {
+		return nil, err
+	}
+
+	b[0] = byte(mType)
+
+	p := packet{
+		Version:     m.config.version,
+		Community:   []byte(m.config.community),
+		RequestType: asn1.RawValue{FullBytes: b},
+	}
+
+	b, err = ber.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (m *managerImpl) nextID() (id int32) {
+	id = m.nextRequestID
+	m.nextRequestID++
+	return
 }
 
 func buildVarbindList(oids []string) []Varbind {

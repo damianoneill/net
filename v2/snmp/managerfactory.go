@@ -2,6 +2,7 @@ package snmp
 
 import (
 	"context"
+	"math/rand"
 	"net"
 	"time"
 
@@ -36,7 +37,8 @@ func (f *factoryImpl) NewManager(ctx context.Context, target string, opts ...Man
 		config.trace.Error("Network Connection", &config, err)
 		return nil, err
 	}
-	return &managerImpl{config: &config, conn: conn}, nil
+
+	return &managerImpl{config: &config, conn: conn, nextRequestID: rand.Int31()}, nil
 }
 
 // ManagerOption implements options for configuring manager behaviour.
@@ -130,7 +132,7 @@ var defaultConfig = managerConfig{
 	address:   "",
 	community: "public",
 	version:   SNMPV2C,
-	timeout:   time.Second,
+	timeout:   time.Second * 5,
 	retries:   0,
 	trace:     DefaultLoggingHooks,
 }

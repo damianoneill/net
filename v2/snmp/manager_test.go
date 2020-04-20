@@ -16,44 +16,77 @@ func TestGet(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
 
-	// Based on example at https://www.ranecommercial.com/legacy/pdf/ranenotes/SNMP_Simple_Network_Management_Protocol.pdf
-	getMessage := []byte{
-		// Message Type = Sequence, Length = 44
-		0x30, 0x2c,
+	getRequest := []byte{
+		// Message Type = Sequence, Length = 38
+		0x30, 0x26,
 		// Version Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
-		// Community String Type = Octet String, Length = 7, Value = private
-		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
-		// PDU Type = GetRequest, Length = 30
-		0xa0, 0x1e,
+		// Community String Type = Octet String, Length = 6, Value = public
+		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
+		// PDU Type = GetRequest, Length = 25
+		0xa0, 0x19,
 		// Request ID Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
-		// Error Type = Integer, Length = 1, Value = 1
+		// Error Type = Integer, Length = 1, Value = 0
 		0x02, 0x01, 0x00,
-		// Error Index Type = Integer, Length = 1, Value = 1
+		// Error Index Type = Integer, Length = 1, Value = 0
 		0x02, 0x01, 0x00,
 		// Varbind List Type = Sequence, Length = 19
-		0x30, 0x13,
-		// Varbind Type = Sequence, Length = 17
-		0x30, 0x11,
-		// Object Identifier Type = Object Identifier, Length = 13, Value = 1.3.6.1.4.1.2680.1.2.7.3.2.0
-		0x06, 0x0d, 0x2b, 0x06, 0x01, 0x04, 0x01, 0x94, 0x78, 0x01, 0x02, 0x07, 0x03, 0x02, 0x00,
+		0x30, 0x0e,
+		// Varbind Type = Sequence, Length = 12
+		0x30, 0x0c,
+		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.5.0
+		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x05, 0x00,
 		// Value Type = Null, Length = 0
 		0x05, 0x00,
 	}
 
+	getResponse := []byte{
+		// Message Type = Sequence, Length = 54
+		0x30, 0x82, 0x00, 0x36,
+		// Version Type = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Community String Type = Octet String, Length = 6, Value = public
+		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
+		// PDU Type = GetResponse, Length = 39
+		0xa2, 0x82, 0x00, 0x27,
+		// Request ID Type = Integer, Length = 1, Value = 1
+		0x02, 0x01, 0x01,
+		// Error Type = Integer, Length = 1, Value = 0
+		0x02, 0x01, 0x00,
+		// Error Index Type = Integer, Length = 1, Value = 0
+		0x02, 0x01, 0x00,
+		// Varbind List Type = Sequence, Length = 26
+		0x30, 0x82, 0x00, 0x1a,
+		// Varbind Type = Sequence, Length = 22
+		0x30, 0x82, 0x00, 0x16,
+		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.5.0
+		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x05, 0x00,
+		// Value Type = Octet String, Length = 10, Value = cisco-7513
+		0x04, 0x0a, 0x63, 0x69, 0x73, 0x63, 0x6f, 0x2d, 0x37, 0x35, 0x31, 0x33,
+	}
+
 	gomock.InOrder(
-		mockConn.EXPECT().Write(getMessage).Return(44, nil),
+		mockConn.EXPECT().SetDeadline(gomock.Any()).Return(nil),
+		mockConn.EXPECT().Write(getRequest).Return(40, nil),
+		mockConn.EXPECT().Read(gomock.Any()).DoAndReturn(
+			func(input []byte) (int, error) {
+				copy(input, getResponse)
+				return len(getResponse), nil
+			}),
 	)
 
 	config := defaultConfig
 	config.address = "localhost:161"
-	config.community = "private"
-	m := &managerImpl{config: &config, conn: mockConn}
+	config.community = "public"
+	m := &managerImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
-	r, err := m.Get(context.Background(), []string{"1.3.6.1.4.1.2680.1.2.7.3.2.0"})
-	assert.Nil(t, r)
-	assert.Nil(t, err)
+	pdu, err := m.Get(context.Background(), []string{"1.3.6.1.2.1.1.5.0"})
+	assert.NoError(t, err)
+	assert.NotNil(t, pdu)
+	assert.Len(t, pdu.VarbindList, 1)
+	value := pdu.VarbindList[0].Value
+	assert.Equal(t, "cisco-7513", string(value.([]uint8)))
 
 }
 
@@ -61,15 +94,7 @@ func TestNoOpImplementations(t *testing.T) {
 	m, err := NewFactory().NewManager(context.Background(), "localhost:161")
 	assert.NoError(t, err)
 
-	r, err := m.Get(context.Background(), []string{"1.3.6.1.2.1.2.2.1.1"})
-	assert.Nil(t, r)
-	assert.Nil(t, err)
-
-	r, err = m.GetNext(context.Background(), []string{"1.3.6.1.2.1.2.2.1.1"})
-	assert.Nil(t, r)
-	assert.Nil(t, err)
-
-	r, err = m.GetBulk(context.Background(), []string{"1.3.6.1.2.1.2.2.1.1"}, 5, 10)
+	r, err := m.GetBulk(context.Background(), []string{"1.3.6.1.2.1.2.2.1.1"}, 5, 10)
 	assert.Nil(t, r)
 	assert.Nil(t, err)
 
@@ -78,4 +103,32 @@ func TestNoOpImplementations(t *testing.T) {
 	}
 	err = m.GetWalk(context.Background(), "1.3.6.1.2.1.2.2.1.1", walker)
 	assert.Nil(t, err)
+}
+
+func TestRealGet(t *testing.T) {
+
+	m, err := NewFactory().NewManager(context.Background(), "snmp.live.gambitcommunications.com:161")
+	assert.NoError(t, err)
+
+	pdu, err := m.Get(context.Background(), []string{"1.3.6.1.2.1.1.5.0"})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, pdu)
+	assert.Len(t, pdu.VarbindList, 1)
+	value := pdu.VarbindList[0].Value
+	assert.Equal(t, "cisco-7513", string(value.([]uint8)))
+}
+
+func TestRealGetNext(t *testing.T) {
+
+	m, err := NewFactory().NewManager(context.Background(), "snmp.live.gambitcommunications.com:161")
+	assert.NoError(t, err)
+
+	pdu, err := m.GetNext(context.Background(), []string{"1.3.6.1.2.1.1.5"})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, pdu)
+	assert.Len(t, pdu.VarbindList, 1)
+	value := pdu.VarbindList[0].Value
+	assert.Equal(t, "cisco-7513", string(value.([]uint8)))
 }
