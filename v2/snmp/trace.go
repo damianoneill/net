@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"encoding/hex"
 	"log"
 )
 
@@ -15,6 +16,12 @@ type ManagerTrace struct {
 
 	// Error is called after an error condition has been detected.
 	Error func(location string, config *managerConfig, err error)
+
+	// WriteComplete is called after a packet has been written
+	WriteComplete func(config *managerConfig, output []byte, err error)
+
+	// ReadComplete is called after a read has completed
+	ReadComplete func(config *managerConfig, input []byte, err error)
 
 	// TODO Define other hooks
 }
@@ -37,11 +44,19 @@ var DiagnosticLoggingHooks = &ManagerTrace{
 	Error: func(location string, config *managerConfig, err error) {
 		log.Printf("Error context:%s target:%s err:%v\n", location, config.address, err)
 	},
+	WriteComplete: func(config *managerConfig, output []byte, err error) {
+		log.Printf("WriteComplete target:%s err:%v data:%s\n", config.address, err, hex.EncodeToString(output))
+	},
+	ReadComplete: func(config *managerConfig, input []byte, err error) {
+		log.Printf("ReadComplete target:%s err:%v data:%s\n", config.address, err, hex.EncodeToString(input))
+	},
 }
 
 // NoOpLoggingHooks provides set of hooks that do nothing.
 var NoOpLoggingHooks = &ManagerTrace{
-	ConnectStart: func(config *managerConfig) {},
-	ConnectDone:  func(config *managerConfig, err error) {},
-	Error:        func(location string, config *managerConfig, err error) {},
+	ConnectStart:  func(config *managerConfig) {},
+	ConnectDone:   func(config *managerConfig, err error) {},
+	Error:         func(location string, config *managerConfig, err error) {},
+	WriteComplete: func(config *managerConfig, output []byte, err error) {},
+	ReadComplete:  func(config *managerConfig, input []byte, err error) {},
 }

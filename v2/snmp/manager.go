@@ -98,12 +98,12 @@ func (m *managerImpl) executeGet(ctx context.Context, mType messageType, oids []
 		return nil, err
 	}
 
-	n, err := m.conn.Write(b)
+	err = m.writePacket(b)
 	if err != nil {
 		return nil, err
 	}
 
-	input, err := m.readResponse(n, err)
+	input, err := m.readResponse()
 	if err != nil {
 		// TODO Handle EOF
 		return nil, err
@@ -112,11 +112,17 @@ func (m *managerImpl) executeGet(ctx context.Context, mType messageType, oids []
 	return m.parseResponse(input)
 }
 
-func (m *managerImpl) readResponse(n int, err error) ([]byte, error) {
-	input := make([]byte, maxInputBufferSize)
+func (m *managerImpl) writePacket(b []byte) (err error) {
+	n, err := m.conn.Write(b)
+	m.config.trace.WriteComplete(m.config, b[0:n], err)
+	return
+}
 
-	n, err = m.conn.Read(input[:])
+func (m *managerImpl) readResponse() (input []byte, err error) {
+	input = make([]byte, maxInputBufferSize)
 
+	n, err := m.conn.Read(input[:])
+	defer m.config.trace.ReadComplete(m.config, input[0:n], err)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +131,8 @@ func (m *managerImpl) readResponse(n int, err error) ([]byte, error) {
 		// Never expect this to happen
 		panic(fmt.Errorf("overflowing response buffer"))
 	}
-	return input, nil
+
+	return input[0:n], nil
 }
 
 func (m *managerImpl) parseResponse(input []byte) (*PDU, error) {
