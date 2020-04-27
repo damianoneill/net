@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/asn1"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -32,6 +33,9 @@ type Session interface {
 	// Issues SNMP GET BULK requests starting from the specified root oid, invoking the function walker for each
 	// variable that is a descendant of the root oid.
 	BulkWalk(ctx context.Context, rootOid string, maxRepetitions int, walker Walker) error
+
+	// Embed standard Close()
+	io.Closer
 }
 
 // Walker defines a function that will be called for each variable processed by the Walk/BulkWalk methods.
@@ -112,6 +116,10 @@ func (m *sessionImpl) Walk(ctx context.Context, rootOid string, walker Walker) e
 
 func (m *sessionImpl) BulkWalk(ctx context.Context, rootOid string, maxRepetitions int, walker Walker) error {
 	return m.executeWalk(ctx, getBulkMessage, maxRepetitions, rootOid, walker)
+}
+
+func (m *sessionImpl) Close() error {
+	return m.conn.Close()
 }
 
 // Generic Get execution.

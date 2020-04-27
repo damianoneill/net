@@ -75,6 +75,7 @@ func TestGet(t *testing.T) {
 				copy(input, getResponse)
 				return len(getResponse), nil
 			}),
+		mockConn.EXPECT().Close().Return(nil),
 	)
 
 	config := defaultConfig
@@ -82,6 +83,7 @@ func TestGet(t *testing.T) {
 	config.community = "public"
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
+	defer m.Close()
 
 	pdu, err := m.Get(context.Background(), []string{"1.3.6.1.2.1.1.5.0"})
 	assert.NoError(t, err)
