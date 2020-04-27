@@ -73,6 +73,7 @@ func TestTypedVariableStringRepresentation(t *testing.T) {
 		{"EndOfMib", &TypedValue{EndOfMib, nil}, "End of Mib"},
 		{"NoSuchObject", &TypedValue{NoSuchObject, nil}, "No such Object"},
 		{"NoSuchInstance", &TypedValue{NoSuchInstance, nil}, "No such Instance"},
+		{"InvalidType", &TypedValue{9999, nil}, "unrecognised data type 9999"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -85,8 +86,6 @@ func TestTypedVariableStringRepresentation(t *testing.T) {
 
 		})
 	}
-	assert.Panics(t, func() { (&TypedValue{Type: 9999}).String() }, "should panic with unrecognised data type")
-
 }
 
 func TestTypedVariableIntegerRepresentation(t *testing.T) {
@@ -114,4 +113,8 @@ func TestTypedVariableIntegerRepresentation(t *testing.T) {
 	}
 
 	assert.Panics(t, func() { (&TypedValue{Type: OctetString}).Int() }, "should panic with non-integer type")
+}
+
+func TestTypedVariableOIDRepresentation(t *testing.T) {
+	assert.Equal(t, (&TypedValue{OID, asn1.ObjectIdentifier{1, 3, 500, 5}}).OID(), asn1.ObjectIdentifier{1, 3, 500, 5})
 }
