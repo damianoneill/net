@@ -4,6 +4,8 @@ import (
 	"encoding/asn1"
 	"reflect"
 	"testing"
+
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestUnmarshalVariable(t *testing.T) {
@@ -52,4 +54,64 @@ func TestUnmarshalVariable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTypedVariableStringRepresentation(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      *TypedValue
+		wantString string
+	}{
+		{"Integer", &TypedValue{Integer, int64(17171)}, "17171"},
+		{"OctetString", &TypedValue{OctetString, []uint8{0x61, 0x62, 0x63}}, "abc"},
+		{"OID", &TypedValue{OID, asn1.ObjectIdentifier{1, 3, 10}}, "1.3.10"},
+		{"IpAddress", &TypedValue{IpAdddress, []uint8{0x0a, 0x12, 0x55, 0x27}}, "10.18.85.39"},
+		{"Counter64", &TypedValue{Counter64, uint64(91919111919)}, "91919111919"},
+		{"Counter32", &TypedValue{Counter32, uint32(29292)}, "29292"},
+		{"Time", &TypedValue{Time, uint32(18532)}, "185.32ms"},
+		{"Opaque", &TypedValue{Opaque, []uint8{0x01, 0xFF, 0xFE}}, "01fffe"},
+		{"EndOfMib", &TypedValue{EndOfMib, nil}, "End of Mib"},
+		{"NoSuchObject", &TypedValue{NoSuchObject, nil}, "No such Object"},
+		{"NoSuchInstance", &TypedValue{NoSuchInstance, nil}, "No such Instance"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			result := tt.input.String()
+
+			if result != tt.wantString {
+				t.Errorf("String type = %s, want %s got %s", tt.name, tt.wantString, result)
+			}
+
+		})
+	}
+	assert.Panics(t, func() { (&TypedValue{Type: 9999}).String() }, "should panic with unrecognised data type")
+
+}
+
+func TestTypedVariableIntegerRepresentation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input *TypedValue
+		want  int
+	}{
+		{"Integer", &TypedValue{Integer, int64(17171)}, 17171},
+		{"Counter64", &TypedValue{Counter64, uint64(91919111919)}, 91919111919},
+		{"Counter32", &TypedValue{Counter32, uint32(29292)}, 29292},
+		{"Gauge32", &TypedValue{Gauge32, uint32(2020)}, 2020},
+		{"Time", &TypedValue{Time, uint32(18532)}, 18532},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			result := tt.input.Int()
+
+			if result != tt.want {
+				t.Errorf("Integer type = %s, want %d got %d", tt.name, tt.want, result)
+			}
+
+		})
+	}
+
+	assert.Panics(t, func() { (&TypedValue{Type: OctetString}).Int() }, "should panic with non-integer type")
 }

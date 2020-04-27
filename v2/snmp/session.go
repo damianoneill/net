@@ -55,12 +55,6 @@ type Varbind struct {
 	TypedValue *TypedValue
 }
 
-// Encapsulates the data type and value of a variable received in a variable binding from an agent.
-type TypedValue struct {
-	Type  DataType
-	Value interface{}
-}
-
 type sessionImpl struct {
 	conn          net.Conn
 	config        *sessionConfig

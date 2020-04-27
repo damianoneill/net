@@ -2,7 +2,11 @@ package snmp
 
 import (
 	"encoding/asn1"
+	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/geoffgarside/ber"
 )
@@ -66,7 +70,7 @@ func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
 		case asn1.TagInteger:
 			return unmarshalInteger(raw, Integer)
 		case asn1.TagOctetString:
-			return unmarshalString(raw, OctetString)
+			return unmarshalOctetString(raw, OctetString)
 		case asn1.TagOID:
 			return unmarshalOID(raw)
 		}
@@ -74,7 +78,7 @@ func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
 	case asn1.ClassApplication:
 		switch raw.Tag {
 		case resolvedIpTag:
-			return unmarshalString(raw, IpAdddress)
+			return unmarshalOctetString(raw, IpAdddress)
 		case resolvedCounter32Tag:
 			return unmarshalInteger(raw, Counter32)
 		case resolvedCounter64Tag:
@@ -84,7 +88,7 @@ func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
 		case resolvedTimeTag:
 			return unmarshalInteger(raw, Time)
 		case resolvedOpaqueTag:
-			return unmarshalString(raw, Opaque)
+			return unmarshalOctetString(raw, Opaque)
 		}
 	case asn1.ClassContextSpecific:
 		switch raw.Tag {
@@ -129,7 +133,7 @@ func integerValue(v int64, dataType DataType) interface{} {
 }
 
 // Unmarshals an SNMP octetstring-based variable into a TypedValue.
-func unmarshalString(raw *asn1.RawValue, dataType DataType) (*TypedValue, error) {
+func unmarshalOctetString(raw *asn1.RawValue, dataType DataType) (*TypedValue, error) {
 	value := &TypedValue{Type: dataType, Value: []byte{}}
 	// Replace SNMP-tag with the generic OctetString tag, so ASN1 unmarshalling works.
 	raw.FullBytes[0] = asn1.TagOctetString
@@ -148,4 +152,72 @@ func unmarshalOID(raw *asn1.RawValue) (*TypedValue, error) {
 		return nil, err
 	}
 	return &TypedValue{Type: OID, Value: asn1.ObjectIdentifier(value.([]int))}, nil
+}
+
+// Encapsulates the data type and value of a variable received in a variable binding from an agent.
+type TypedValue struct {
+	Type  DataType
+	Value interface{}
+}
+
+// Delivers value of a typed value as a string.
+func (tv *TypedValue) String() string {
+	switch tv.Type {
+	case Integer:
+		return strconv.FormatInt(tv.Value.(int64), 10)
+	case OctetString:
+		return string(tv.Value.([]uint8))
+	case OID:
+		return tv.Value.(asn1.ObjectIdentifier).String()
+	case Time:
+		t := int64(tv.Value.(uint32)) * 10000
+		return time.Duration(t).String()
+	case Counter32:
+		fallthrough
+	case Gauge32:
+		return strconv.FormatInt(int64(tv.Value.(uint32)), 10)
+	case Counter64:
+		return strconv.FormatInt(int64(tv.Value.(uint64)), 10)
+	case IpAdddress:
+		address := tv.Value.([]uint8)
+		str := make([]string, len(address))
+		for x, octet := range address {
+			str[x] = strconv.Itoa(int(octet))
+		}
+		return strings.Join(str, ".")
+	case Opaque:
+		return hex.EncodeToString(tv.Value.([]uint8))
+
+	case EndOfMib:
+		return "End of Mib"
+	case NoSuchObject:
+		return "No such Object"
+	case NoSuchInstance:
+		return "No such Instance"
+	}
+	return fmt.Sprintf("unrecognised data type %d", tv.Type)
+}
+
+// Delivers value of a typed value as an ObjectIdentifier.
+// Value type must be OID!
+func (tv *TypedValue) OID() asn1.ObjectIdentifier {
+	return tv.Value.(asn1.ObjectIdentifier)
+}
+
+// Delivers value of a typed value as an int.
+// Value type must be integer-based.
+func (tv *TypedValue) Int() int {
+	switch tv.Type {
+	case Integer:
+		return int(tv.Value.(int64))
+	case Counter64:
+		return int(tv.Value.(uint64))
+	case Counter32:
+		fallthrough
+	case Gauge32:
+		fallthrough
+	case Time:
+		return int(tv.Value.(uint32))
+	}
+	panic(fmt.Errorf("non-integer data type %d", tv.Type))
 }
