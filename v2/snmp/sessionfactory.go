@@ -2,26 +2,27 @@ package snmp
 
 import (
 	"context"
+	"math/rand"
 	"net"
 	"time"
 
 	"github.com/imdario/mergo"
 )
 
-// Defines a factory method for instantiating SNMP Managers.
-type ManagerFactory interface {
-	// NewManager instantiates an SNMP manager for managing the target device.
-	NewManager(ctx context.Context, target string, opts ...ManagerOption) (Manager, error)
+// Defines a factory method for instantiating SNMP Sessions.
+type SessionFactory interface {
+	// NewSession instantiates an SNMP session for managing the target device.
+	NewSession(ctx context.Context, target string, opts ...SessionOption) (Session, error)
 }
 
-// Delivers a new manager factory.
-func NewFactory() ManagerFactory {
+// Delivers a new session factory.
+func NewFactory() SessionFactory {
 	return &factoryImpl{}
 }
 
 type factoryImpl struct{}
 
-func (f *factoryImpl) NewManager(ctx context.Context, target string, opts ...ManagerOption) (Manager, error) {
+func (f *factoryImpl) NewSession(ctx context.Context, target string, opts ...SessionOption) (Session, error) {
 
 	config := defaultConfig
 	config.address = target
@@ -36,56 +37,57 @@ func (f *factoryImpl) NewManager(ctx context.Context, target string, opts ...Man
 		config.trace.Error("Network Connection", &config, err)
 		return nil, err
 	}
-	return &managerImpl{config: &config, conn: conn}, nil
+
+	return &sessionImpl{config: &config, conn: conn, nextRequestID: rand.Int31()}, nil
 }
 
-// ManagerOption implements options for configuring manager behaviour.
-type ManagerOption func(*managerConfig)
+// SessionOption implements options for configuring session behaviour.
+type SessionOption func(*sessionConfig)
 
 // Timeout defines the timeout for receiving a response to a request
 // Default value is 1s.
-func Timeout(timeout time.Duration) ManagerOption {
-	return func(c *managerConfig) {
+func Timeout(timeout time.Duration) SessionOption {
+	return func(c *sessionConfig) {
 		c.timeout = timeout
 	}
 }
 
 // Retries defines the number of times an unsuccessful request will be retried.
 // Default value is 0
-func Retries(value int) ManagerOption {
-	return func(c *managerConfig) {
+func Retries(value int) SessionOption {
+	return func(c *sessionConfig) {
 		c.retries = value
 	}
 }
 
 // Network defines the transport network.
 // Default value is udp
-func Network(value string) ManagerOption {
-	return func(c *managerConfig) {
+func Network(value string) SessionOption {
+	return func(c *sessionConfig) {
 		c.network = value
 	}
 }
 
 // Version defines the SNMP version to use.
 // Default value is SNMPV2C
-func Version(value SNMPVersion) ManagerOption {
-	return func(c *managerConfig) {
+func Version(value SNMPVersion) SessionOption {
+	return func(c *sessionConfig) {
 		c.version = value
 	}
 }
 
 // Commmunity defines the community string to be used.
 // Default value is public.
-func Community(value string) ManagerOption {
-	return func(c *managerConfig) {
+func Community(value string) SessionOption {
+	return func(c *sessionConfig) {
 		c.community = value
 	}
 }
 
-// LoggingHooks defines a set of logging hooks to be used by the manager.
+// LoggingHooks defines a set of logging hooks to be used by the session.
 // Default value is DefaultLoggingHooks.
-func LoggingHooks(trace *ManagerTrace) ManagerOption {
-	return func(c *managerConfig) {
+func LoggingHooks(trace *SessionTrace) SessionOption {
+	return func(c *sessionConfig) {
 		c.trace = trace
 	}
 }
@@ -94,20 +96,20 @@ func LoggingHooks(trace *ManagerTrace) ManagerOption {
 type SNMPVersion int
 
 const (
-	SNMPV1 SNMPVersion = iota
-	SNMPV2C
-	SNMPV3
+	SNMPV1  SNMPVersion = 0
+	SNMPV2C SNMPVersion = 1
+	SNMPV3  SNMPVersion = 3
 )
 
 // Deliver a new network connection to the address defined in the configuration.
-func newConnection(ctx context.Context, m *managerConfig) (conn net.Conn, err error) {
+func newConnection(ctx context.Context, m *sessionConfig) (conn net.Conn, err error) {
 	m.trace.ConnectStart(m)
 	defer m.trace.ConnectDone(m, err)
 	return net.Dial(m.network, m.address)
 }
 
-// Defines properties controlling manager behaviour.
-type managerConfig struct {
+// Defines properties controlling session behaviour.
+type sessionConfig struct {
 	// Connection network, typically udp.
 	network string
 	// Network address/hostname with port, for example: 10.48.24.234:161
@@ -121,16 +123,16 @@ type managerConfig struct {
 	// Defines the number of times an unsuccessful request will be retried.
 	retries int
 	// Trace hooks
-	trace *ManagerTrace
+	trace *SessionTrace
 	// TODO Define additional configuration properties as required.
 }
 
-var defaultConfig = managerConfig{
+var defaultConfig = sessionConfig{
 	network:   "udp",
 	address:   "",
 	community: "public",
 	version:   SNMPV2C,
-	timeout:   time.Second,
-	retries:   0,
+	timeout:   time.Second * 5,
+	retries:   3,
 	trace:     DefaultLoggingHooks,
 }
