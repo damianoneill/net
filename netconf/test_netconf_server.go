@@ -21,10 +21,10 @@ const (
 type TestNCServer struct {
 	*testutil.SSHServer
 	sessionHandlers map[uint64]*SessionHandler
-	reqHandlers []RequestHandler
-	caps []string
-	nextSid uint64
-	tctx assert.TestingT
+	reqHandlers     []RequestHandler
+	caps            []string
+	nextSid         uint64
+	tctx            assert.TestingT
 }
 
 // NewTestNetconfServer creates a new TestNCServer that will accept Netconf localhost connections on an ephemeral port (available
@@ -48,7 +48,7 @@ func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
 }
 
 func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
-	return func(t assert.TestingT) (testutil.SSHHandler) {
+	return func(t assert.TestingT) testutil.SSHHandler {
 		sid := atomic.AddUint64(&ncs.nextSid, 1)
 		sess := newSessionHandler(ncs, sid)
 		ncs.sessionHandlers[sid] = sess
@@ -59,7 +59,7 @@ func (ncs *TestNCServer) newFactory() testutil.HandlerFactory {
 }
 
 // LastHandler delivers the most recently instantiated session handler.
-func (ncs *TestNCServer) LastHandler() (*SessionHandler) {
+func (ncs *TestNCServer) LastHandler() *SessionHandler {
 	return ncs.sessionHandlers[ncs.nextSid]
 }
 
@@ -77,7 +77,7 @@ func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
 
 // Close closes any active transport to the test server and prevents subsequent connections.
 func (ncs *TestNCServer) Close() {
-	for k,v := range ncs.sessionHandlers {
+	for k, v := range ncs.sessionHandlers {
 		if v.ch != nil {
 			v.Close() // nolint: gosec, errcheck
 			ncs.sessionHandlers[k] = nil
@@ -99,7 +99,7 @@ func (ncs *TestNCServer) FailNow() {
 }
 
 // SessionHandler delivers the netconf session handler associated with the specified session id.
-func (ncs *TestNCServer) SessionHandler(id uint64) (*SessionHandler) {
+func (ncs *TestNCServer) SessionHandler(id uint64) *SessionHandler {
 	sh, ok := ncs.sessionHandlers[id]
 	if !ok {
 		ncs.tctx.Errorf("Failed to get handler for session %d", id)
@@ -107,4 +107,3 @@ func (ncs *TestNCServer) SessionHandler(id uint64) (*SessionHandler) {
 	}
 	return sh
 }
-

@@ -24,7 +24,7 @@ type tImpl struct {
 	sshSession  *ssh.Session
 	sshClient   *ssh.Client
 	trace       *ClientTrace
-	target 		string
+	target      string
 }
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration

@@ -49,13 +49,13 @@ type SessionHandler struct {
 
 	// Records executed requests.
 	reqMutex sync.Mutex
-	Reqs []RPCRequest
+	Reqs     []RPCRequest
 }
 
 // rpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
 // request body is unknown.
 type rpcRequestMessage struct {
-	XMLName   xml.Name 
+	XMLName   xml.Name
 	MessageID string     `xml:"message-id,attr"`
 	Request   RPCRequest `xml:",any"`
 }
@@ -261,7 +261,7 @@ func (h *SessionHandler) encode(m interface{}) error {
 	return h.enc.encode(m)
 }
 
-func (h *SessionHandler) reqLogger(r RPCRequest)  {
+func (h *SessionHandler) reqLogger(r RPCRequest) {
 	h.reqMutex.Lock()
 	defer h.reqMutex.Unlock()
 	h.Reqs = append(h.Reqs, r)
