@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func ExampleSession_GetSubTreeUsingStrings() {
+func ExampleOpSession_GetSubtree_usingStrings() {
 
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
@@ -39,7 +39,7 @@ func ExampleSession_GetSubTreeUsingStrings() {
 	// Output: <top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>
 }
 
-func ExampleSession_GetSubTreeUsingStructs() {
+func ExampleOpSession_GetSubtree_usingStructs() {
 
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
@@ -57,7 +57,7 @@ func ExampleSession_GetSubTreeUsingStructs() {
 
 	type testSub struct {
 		XMLName xml.Name `xml:"sub"`
-		Attr    string   `xml:"attr,attr""`
+		Attr    string   `xml:"attr,attr"`
 		Child1  string   `xml:"child1"`
 		Child2  string   `xml:"child2"`
 	}
@@ -83,7 +83,7 @@ func ExampleSession_GetSubTreeUsingStructs() {
 	// cvalue
 }
 
-func ExampleSession_GetXpath() {
+func ExampleOpSession_GetXpath() {
 
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
@@ -112,7 +112,7 @@ func ExampleSession_GetXpath() {
 	// Output: <top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>
 }
 
-func ExampleSession_GetConfig() {
+func ExampleOpSession_GetConfigSubtree() {
 
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
@@ -130,7 +130,7 @@ func ExampleSession_GetConfig() {
 
 	type testSub struct {
 		XMLName xml.Name `xml:"sub"`
-		Attr    string   `xml:"attr,attr""`
+		Attr    string   `xml:"attr,attr"`
 		Child1  string   `xml:"child1"`
 		Child2  string   `xml:"child2"`
 	}
@@ -156,7 +156,7 @@ func ExampleSession_GetConfig() {
 	// cfgval2
 }
 
-func ExampleSession_GetSchema() {
+func ExampleOpSession_GetSchema() {
 
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 

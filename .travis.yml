@@ -13,9 +13,10 @@ git:
 
 before_script:
   - go get -u github.com/mattn/goveralls
-  - curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.21.0
+  - curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.26.0
 
 script:
   - ./bin/golangci-lint run
+  - (cd v2; ../bin/golangci-lint run)
   - (cd v2 ; go test -timeout 120s -race $(go list ./...| grep -v testserver) -coverprofile=coverage.out) # Run all the tests with the race detector enabled
   - (cd v2; goveralls -coverprofile=coverage.out -service travis-ci)

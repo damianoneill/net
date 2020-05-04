@@ -122,5 +122,5 @@ func TestTrace(t *testing.T) {
 	assert.Equal(t, "WriteDone Message\n 8 <nil>", traces[3])
 	assert.Equal(t, "ReadStart called", traces[4])
 	assert.Equal(t, "ReadDone GOT:Message\n 12 <nil>", traces[5])
-	assert.Contains(t, traces[6], fmt.Sprintf("ConnectionClosed target:localhost:"), traces[6])
+	assert.Contains(t, traces[6], "ConnectionClosed target:localhost:", traces[6])
 }

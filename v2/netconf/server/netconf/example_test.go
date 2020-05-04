@@ -28,7 +28,7 @@ func (es *exampleServer) HandleRequest(req *RpcRequestMessage) *RpcReplyMessage 
 	return nil
 }
 
-func Example_NewServer() {
+func ExampleNewServer() {
 
 	sshcfg, _ := ssh.PasswordConfig("UserA", "PassA")
 	server, _ := NewServer(context.Background(), "localhost", 0, sshcfg,
