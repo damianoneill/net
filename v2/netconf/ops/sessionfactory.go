@@ -29,7 +29,3 @@ func NewSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target 
 	s = &sImpl{Session: cs}
 	return
 }
-
-func createTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target string) (t client.Transport, err error) {
-	return client.NewSSHTransport(ctx, clientConfig, target, "netconf")
-}

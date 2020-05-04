@@ -22,8 +22,8 @@ type sHandler struct{}
 
 func (s *sHandler) Handle(ch xssh.Channel) {
 	buffer := make([]byte, 5)
-	ch.Read(buffer)
-	ch.Write([]byte(">" + string(buffer) + "<"))
+	_, _ = ch.Read(buffer)
+	_, _ = ch.Write([]byte(">" + string(buffer) + "<"))
 }
 
 func handlerFactory() HandlerFactory {
@@ -56,9 +56,9 @@ func TestServer(t *testing.T) {
 	assert.NoError(t, err, "Not expecting new transport to fail")
 	defer tr.Close()
 
-	tr.Write([]byte("hello"))
+	_, _ = tr.Write([]byte("hello"))
 	buffer := make([]byte, 7)
-	tr.Read(buffer)
+	_, _ = tr.Read(buffer)
 	assert.Equal(t, ">hello<", string(buffer))
 }
 
@@ -123,9 +123,9 @@ func TestServerDiagnosticTraceHooks(t *testing.T) {
 	assert.NoError(t, err, "Not expecting new transport to fail")
 	defer tr.Close()
 
-	tr.Write([]byte("hello"))
+	_, _ = tr.Write([]byte("hello"))
 	buffer := make([]byte, 7)
-	tr.Read(buffer)
+	_, _ = tr.Read(buffer)
 	assert.Equal(t, ">hello<", string(buffer))
 }
 
@@ -153,8 +153,8 @@ func TestServerNoOpTraceHooks(t *testing.T) {
 	assert.NoError(t, err, "Not expecting new transport to fail")
 	defer tr.Close()
 
-	tr.Write([]byte("hello"))
+	_, _ = tr.Write([]byte("hello"))
 	buffer := make([]byte, 7)
-	tr.Read(buffer)
+	_, _ = tr.Read(buffer)
 	assert.Equal(t, ">hello<", string(buffer))
 }

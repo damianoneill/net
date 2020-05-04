@@ -366,7 +366,7 @@ type GetReq struct {
 
 type ConfigType struct {
 	Type string `xml:",innerxml"`
-	Url  string `xml:"url,omitempty""`
+	Url  string `xml:"url,omitempty"`
 }
 
 type GetConfigReq struct {

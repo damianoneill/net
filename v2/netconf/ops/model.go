@@ -28,7 +28,7 @@ const (
 
 type Data struct {
 	XMLName xml.Name    `xml:"data"`
-	Body    interface{} `xml:",any""`
+	Body    interface{} `xml:",any"`
 	Content string      `xml:",innerxml"`
 }
 
@@ -41,7 +41,7 @@ type Schema struct {
 }
 
 type NetconfState struct {
-	XMLName xml.Name `xml:"urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring netconf-state`
+	XMLName xml.Name `xml:"urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring netconf-state"`
 	Xmlns   string   `xml:"xmlns,attr"`
 	Schemas struct {
 		Schema []Schema `xml:"schema"`
