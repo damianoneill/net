@@ -3,6 +3,8 @@ github.com/damianoneill/net/v2 v2.1.0 h1:IY2fLsKJnYnOVAG8nYsYyn3zHy9M7aeTlZU4Dyn
 github.com/damianoneill/net/v2 v2.1.0/go.mod h1:ydqBNCewGIXYKyrD50dX+0LGrCRw7xQq/xT20E4h6+Y=
 github.com/damianoneill/net/v2 v2.2.0 h1:kOqct8Za05K2atrCOthayitLYFdK/9jdZLDbEM7kyt0=
 github.com/damianoneill/net/v2 v2.2.0/go.mod h1:ydqBNCewGIXYKyrD50dX+0LGrCRw7xQq/xT20E4h6+Y=
+github.com/damianoneill/net/v2 v2.3.0 h1:fTiuERIYV3YdXeeZTw4Wv+aLPsovCHreq/hVwdEqS80=
+github.com/damianoneill/net/v2 v2.3.0/go.mod h1:n4igHZcXVmfNT69C6NaV/yGgPwZvV8ilNK2yW2HRGHc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
