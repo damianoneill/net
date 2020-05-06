@@ -13,6 +13,7 @@ This package includes:
 * Client side support of the NETCONF Protocol defined in [(rfc6241)](https://tools.ietf.org/html/rfc6241).
 * Client side support for NETCONF Notifications defined in [(rc5277)](https://tools.ietf.org/html/rfc5277).
 * GetSchemas and GetSchema from NETCONF Monitoring defined in [(rfc6022)](https://tools.ietf.org/html/rfc6022).
+* Client side support of the SNMP Protocol defined in [rfc3416](https://tools.ietf.org/html/rfc3416).
 
 The library includes support for the following cross-cutting concerns through dependency injection:
 
@@ -30,3 +31,5 @@ go get -u github.com/damianoneill/net/...
 ## Credits
 
 The implementation of the framing codec in the rfc6242 package has been adapted from an implementation by [Andrew Fort](https://github.com/andaru) - https://github.com/andaru/netconf.
+
+The implementation of the ber encoding has been leveraged from the implementation by [Geoff Garside](http://geoffgarside.co.uk/) - https://github.com/geoffgarside/ber.
