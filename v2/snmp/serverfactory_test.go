@@ -12,12 +12,13 @@ func TestNewServerSuccess(t *testing.T) {
 	f := NewServerFactory()
 
 	handler := &dummyHandler{}
-	s, err := f.NewServer(context.Background(), handler)
+	s, err := f.NewServer(context.Background(), handler,
+		Port(0)) // Port 0 will use ephemeral port and avoid any restrictions on using 162.
 	assert.NoError(t, err)
 	assert.NotNil(t, s, "Server should not be nil")
 	impl := s.(*serverImpl)
 	assert.Equal(t, "", impl.config.address)
-	assert.Equal(t, 162, impl.config.port)
+	assert.Equal(t, 0, impl.config.port)
 	assert.Same(t, handler, impl.handler)
 }
 
