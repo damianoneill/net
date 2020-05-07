@@ -8,14 +8,14 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestNewManagerSuccess(t *testing.T) {
+func TestNewSessionSuccess(t *testing.T) {
 	f := NewFactory()
 	m, err := f.NewSession(context.Background(), "localhost:161")
 	assert.NoError(t, err)
 	assert.NotNil(t, m, "Session should not be nil")
 }
 
-func TestNewManagerOptions(t *testing.T) {
+func TestNewSessionOptions(t *testing.T) {
 	f := NewFactory()
 	m, err := f.NewSession(context.Background(), "localhost:161",
 		Network("udp"),

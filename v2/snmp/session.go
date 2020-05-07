@@ -97,6 +97,9 @@ type messageType byte
 const getMessage = 0xA0
 const getNextMessage = 0xA1
 const getBulkMessage = 0xA5
+const getResponse = 0xA2
+const inform = 0xA6
+const v2Trap = 0xA7
 
 func (m *sessionImpl) Get(ctx context.Context, oids []string) (*PDU, error) {
 	return m.executeGet(ctx, getMessage, oids, 0, 0)
