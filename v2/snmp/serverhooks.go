@@ -18,10 +18,10 @@ type ServerHooks struct {
 	// Error is called after an error condition has been detected.
 	Error func(config *serverConfig, err error)
 
-	// WriteDone is called after a packet has been written
+	// WriteComplete is called after a packet has been written
 	WriteComplete func(config *serverConfig, addr net.Addr, output []byte, err error)
 
-	// ReadDone is called after a read has completed
+	// ReadComplete is called after a read has completed
 	ReadComplete func(config *serverConfig, addr net.Addr, input []byte, err error)
 }
 
@@ -32,12 +32,12 @@ var DefaultServerHooks = &ServerHooks{
 	},
 	WriteComplete: func(config *serverConfig, addr net.Addr, output []byte, err error) {
 		if err != nil {
-			log.Printf("WriteDone target:%s err:%v\n", addr, err)
+			log.Printf("WriteComplete target:%s err:%v\n", addr, err)
 		}
 	},
 	ReadComplete: func(config *serverConfig, addr net.Addr, input []byte, err error) {
 		if err != nil {
-			log.Printf("ReadDone source:%s err:%v\n", addr, err)
+			log.Printf("ReadComplete source:%s err:%v\n", addr, err)
 		}
 	},
 }
@@ -54,10 +54,10 @@ var DiagnosticServerHooks = &ServerHooks{
 		log.Printf("Error err:%v\n", err)
 	},
 	WriteComplete: func(config *serverConfig, addr net.Addr, output []byte, err error) {
-		log.Printf("WriteDone target:%s err:%v data:%s\n", addr, err, hex.EncodeToString(output))
+		log.Printf("WriteComplete target:%s err:%v data:%s\n", addr, err, hex.EncodeToString(output))
 	},
 	ReadComplete: func(config *serverConfig, addr net.Addr, input []byte, err error) {
-		log.Printf("ReadDone source:%s err:%v data:%s\n", addr, err, hex.EncodeToString(input))
+		log.Printf("ReadComplete source:%s err:%v data:%s\n", addr, err, hex.EncodeToString(input))
 	},
 }
 
