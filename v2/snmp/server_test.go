@@ -121,10 +121,10 @@ func TestInformAcknwoledgementFailure(t *testing.T) {
 
 	// Shoehorn a Done() of the WaitGroup into the WriteComplete hook.
 	// This mean we wait until the incoming inform message has been acknowledged.
-	hooks := *DiagnosticServerHooks
+	hooks := *DefaultServerHooks
 	config.trace = &hooks
 	config.trace.WriteComplete = func(config *serverConfig, addr net.Addr, output []byte, err error) {
-		DiagnosticServerHooks.WriteComplete(config, addr, output, err)
+		DefaultServerHooks.WriteComplete(config, addr, output, err)
 		h.wg.Done()
 	}
 	config.resolveServerHooks()
