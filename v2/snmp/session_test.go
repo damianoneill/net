@@ -753,7 +753,7 @@ func TestBulkWalk(t *testing.T) {
 	config := defaultConfig
 	config.address = "localhost:161"
 	config.community = "public"
-	config.trace = DiagnosticLoggingHooks
+	config.trace = MetricLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
 	varbinds := []*Varbind{}

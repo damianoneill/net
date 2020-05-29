@@ -102,10 +102,12 @@ const (
 )
 
 // Deliver a new network connection to the address defined in the configuration.
-func newConnection(ctx context.Context, m *SessionConfig) (conn net.Conn, err error) {
-	m.trace.ConnectStart(m)
-	defer m.trace.ConnectDone(m, err)
-	return net.Dial(m.network, m.address)
+func newConnection(ctx context.Context, c *SessionConfig) (conn net.Conn, err error) {
+	defer func(begin time.Time) {
+		c.trace.ConnectDone(c, err, time.Since(begin))
+	}(time.Now())
+	c.trace.ConnectStart(c)
+	return net.Dial(c.network, c.address)
 }
 
 // SessionConfig defines properties controlling session behaviour.
