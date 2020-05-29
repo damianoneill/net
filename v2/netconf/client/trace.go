@@ -85,51 +85,60 @@ type ClientTrace struct {
 // DefaultLoggingHooks provides a default logging hook to report errors.
 var DefaultLoggingHooks = &ClientTrace{
 	Error: func(context, target string, err error) {
-		log.Printf("Error context:%s target:%s err:%v\n", context, target, err)
+		log.Printf("NETCONF-Error context:%s target:%s err:%v\n", context, target, err)
+	},
+}
+
+// MetricLoggingHooks provides a set of hooks that will log network metrics.
+var MetricLoggingHooks = &ClientTrace{
+	ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
+		log.Printf("NETCONF-ConnectDone target:%s config:%v err:%v took:%dms\n", target, clientConfig, err, d.Milliseconds())
+	},
+	ReadDone: func(p []byte, c int, err error, d time.Duration) {
+		log.Printf("NETCONF-ReadDone len:%d err:%v took:%dms\n", c, err, d.Milliseconds())
+	},
+	WriteDone: func(p []byte, c int, err error, d time.Duration) {
+		log.Printf("NETCONF-WriteDone len:%d err:%v took:%dms\n", c, err, d.Milliseconds())
+	},
+
+	Error: DefaultLoggingHooks.Error,
+
+	ExecuteDone: func(req common.Request, async bool, res *common.RPCReply, err error, d time.Duration) {
+		log.Printf("NETCONF-ExecuteDone async:%v err:%v took:%dms\n", async, err, d.Milliseconds())
 	},
 }
 
 // DiagnosticLoggingHooks provides a set of default diagnostic hooks
 var DiagnosticLoggingHooks = &ClientTrace{
 	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
-		log.Printf("ConnectStart target:%s config:%v\n", target, clientConfig)
+		log.Printf("NETCONF-ConnectStart target:%s config:%v\n", target, clientConfig)
 	},
-	ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
-		log.Printf("ConnectDone target:%s config:%v err:%v took:%dns\n", target, clientConfig, err, d)
-	},
+	ConnectDone: MetricLoggingHooks.ConnectDone,
 	ConnectionClosed: func(target string, err error) {
-		log.Printf("ConnectionClosed target:%s err:%v\n", target, err)
-	},
-	HelloDone: func(msg *common.HelloMessage) {
-		log.Printf("HelloDone hello:%v\n", msg)
+		log.Printf("NETCONF-ConnectionClosed target:%s err:%v\n", target, err)
 	},
 	ReadStart: func(p []byte) {
-		log.Printf("ReadStart capacity:%d\n", len(p))
+		log.Printf("NETCONF-ReadStart capacity:%d\n", len(p))
 	},
-	ReadDone: func(p []byte, c int, err error, d time.Duration) {
-		log.Printf("ReadDone len:%d err:%v took:%dns\n", c, err, d)
-	},
+	ReadDone: MetricLoggingHooks.ReadDone,
 	WriteStart: func(p []byte) {
-		log.Printf("WriteStart len:%d\n", len(p))
+		log.Printf("NETCONF-WriteStart len:%d\n", len(p))
 	},
-	WriteDone: func(p []byte, c int, err error, d time.Duration) {
-		log.Printf("WriteDone len:%d err:%v took:%dns\n", c, err, d)
-	},
+	WriteDone: MetricLoggingHooks.WriteDone,
 
-	Error: func(context, target string, err error) {
-		log.Printf("Error context:%s target:%s err:%v\n", context, target, err)
-	},
+	Error: DefaultLoggingHooks.Error,
+
 	NotificationReceived: func(n *common.Notification) {
-		log.Printf("NotificationReceived %s\n", n.XMLName.Local)
+		log.Printf("NETCONF-NotificationReceived %s\n", n.XMLName.Local)
 	},
 	NotificationDropped: func(n *common.Notification) {
-		log.Printf("NotificationDropped %s\n", n.XMLName.Local)
+		log.Printf("NETCONF-NotificationDropped %s\n", n.XMLName.Local)
 	},
 	ExecuteStart: func(req common.Request, async bool) {
-		log.Printf("ExecuteStart async:%v req:%s\n", async, req)
+		log.Printf("NETCONF-ExecuteStart async:%v req:%s\n", async, req)
 	},
 	ExecuteDone: func(req common.Request, async bool, res *common.RPCReply, err error, d time.Duration) {
-		log.Printf("ExecuteDone async:%v req:%s err:%v took:%dns\n", async, req, err, d)
+		log.Printf("NETCONF-ExecuteDone async:%v req:%s err:%v took:%dms\n", async, req, err, d.Milliseconds())
 	},
 }
 

@@ -30,36 +30,36 @@ type SessionTrace struct {
 // DefaultLoggingHooks provides a default logging hook to report errors.
 var DefaultLoggingHooks = &SessionTrace{
 	Error: func(location string, config *SessionConfig, err error) {
-		log.Printf("Error context:%s target:%s err:%v\n", location, config.address, err)
+		log.Printf("SNMP-Error context:%s target:%s err:%v\n", location, config.address, err)
 	},
 }
 
 // MetricLoggingHooks provides a set of hooks that log metrics.
 var MetricLoggingHooks = &SessionTrace{
 	ConnectDone: func(config *SessionConfig, err error, d time.Duration) {
-		log.Printf("ConnectDone target:%s err:%v took:%dms\n", config.address, err, d.Milliseconds())
+		log.Printf("SNMP-ConnectDone target:%s err:%v took:%dms\n", config.address, err, d.Milliseconds())
 	},
 	Error: DefaultLoggingHooks.Error,
 	WriteDone: func(config *SessionConfig, output []byte, err error, d time.Duration) {
-		log.Printf("WriteDone target:%s err:%v took:%dms\n", config.address, err, d.Milliseconds())
+		log.Printf("SNMP-WriteDone target:%s err:%v took:%dms\n", config.address, err, d.Milliseconds())
 	},
 	ReadDone: func(config *SessionConfig, input []byte, err error, d time.Duration) {
-		log.Printf("ReadDone target:%s err:%v took:%dms\n", config.address, err, d.Milliseconds())
+		log.Printf("SNMP-ReadDone target:%s err:%v took:%dms\n", config.address, err, d.Milliseconds())
 	},
 }
 
 // DiagnosticLoggingHooks provides a set of hooks that log all events with all data.
 var DiagnosticLoggingHooks = &SessionTrace{
 	ConnectStart: func(config *SessionConfig) {
-		log.Printf("ConnectStart target:%s\n", config.address)
+		log.Printf("SNMP-ConnectStart target:%s\n", config.address)
 	},
 	ConnectDone: MetricLoggingHooks.ConnectDone,
 	Error:       DefaultLoggingHooks.Error,
 	WriteDone: func(config *SessionConfig, output []byte, err error, d time.Duration) {
-		log.Printf("WriteDone target:%s err:%v took:%dms data:%s\n", config.address, err, d.Milliseconds(), hex.EncodeToString(output))
+		log.Printf("SNMP-WriteDone target:%s err:%v took:%dms data:%s\n", config.address, err, d.Milliseconds(), hex.EncodeToString(output))
 	},
 	ReadDone: func(config *SessionConfig, input []byte, err error, d time.Duration) {
-		log.Printf("ReadDone target:%s err:%v took:%dms data:%s\n", config.address, err, d.Milliseconds(), hex.EncodeToString(input))
+		log.Printf("SNMP-ReadDone target:%s err:%v took:%dms data:%s\n", config.address, err, d.Milliseconds(), hex.EncodeToString(input))
 	},
 }
 

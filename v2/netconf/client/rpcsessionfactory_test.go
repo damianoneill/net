@@ -66,6 +66,12 @@ func TestSessionWithHooks(t *testing.T) {
 	assert.NotContains(t, logged, "ConnectStart", "ConnectStart should not be logged")
 	assert.NotContains(t, logged, "ReadDone", "ReadDone should not be logged")
 
+	logged = exerciseSession(t, MetricLoggingHooks)
+	assert.NotEqual(t, "", logged, "Something should be logged")
+	assert.Contains(t, logged, "Error context", "Error should be logged")
+	assert.NotContains(t, logged, "ConnectStart", "ConnectStart should not be logged")
+	assert.Contains(t, logged, "ReadDone", "ReadDone should not be logged")
+
 	logged = exerciseSession(t, DiagnosticLoggingHooks)
 	assert.NotEqual(t, "", logged, "Something should be logged")
 	assert.Contains(t, logged, "Error context", "Error should be logged")
