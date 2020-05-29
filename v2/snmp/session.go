@@ -61,7 +61,7 @@ type Varbind struct {
 
 type sessionImpl struct {
 	conn          net.Conn
-	config        *sessionConfig
+	config        *SessionConfig
 	nextRequestID int32
 }
 

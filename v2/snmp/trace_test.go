@@ -8,11 +8,11 @@ import (
 func TestDiagnosticHooksForUntestableExceptions(t *testing.T) {
 
 	hooks := DiagnosticLoggingHooks
-	hooks.Error("Context", &sessionConfig{}, errors.New("problem"))
+	hooks.Error("Context", &SessionConfig{}, errors.New("problem"))
 }
 
 func TestNoLoggingHooks(t *testing.T) {
 
 	hooks := NoOpLoggingHooks
-	hooks.Error("Context", &sessionConfig{}, errors.New("problem"))
+	hooks.Error("Context", &SessionConfig{}, errors.New("problem"))
 }

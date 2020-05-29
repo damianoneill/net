@@ -42,12 +42,12 @@ func (f *factoryImpl) NewSession(ctx context.Context, target string, opts ...Ses
 }
 
 // SessionOption implements options for configuring session behaviour.
-type SessionOption func(*sessionConfig)
+type SessionOption func(*SessionConfig)
 
 // Timeout defines the timeout for receiving a response to a request
 // Default value is 1s.
 func Timeout(timeout time.Duration) SessionOption {
-	return func(c *sessionConfig) {
+	return func(c *SessionConfig) {
 		c.timeout = timeout
 	}
 }
@@ -55,7 +55,7 @@ func Timeout(timeout time.Duration) SessionOption {
 // Retries defines the number of times an unsuccessful request will be retried.
 // Default value is 0
 func Retries(value int) SessionOption {
-	return func(c *sessionConfig) {
+	return func(c *SessionConfig) {
 		c.retries = value
 	}
 }
@@ -63,7 +63,7 @@ func Retries(value int) SessionOption {
 // Network defines the transport network.
 // Default value is udp
 func Network(value string) SessionOption {
-	return func(c *sessionConfig) {
+	return func(c *SessionConfig) {
 		c.network = value
 	}
 }
@@ -71,7 +71,7 @@ func Network(value string) SessionOption {
 // Version defines the SNMP version to use.
 // Default value is SNMPV2C
 func Version(value SNMPVersion) SessionOption {
-	return func(c *sessionConfig) {
+	return func(c *SessionConfig) {
 		c.version = value
 	}
 }
@@ -79,7 +79,7 @@ func Version(value SNMPVersion) SessionOption {
 // Commmunity defines the community string to be used.
 // Default value is public.
 func Community(value string) SessionOption {
-	return func(c *sessionConfig) {
+	return func(c *SessionConfig) {
 		c.community = value
 	}
 }
@@ -87,7 +87,7 @@ func Community(value string) SessionOption {
 // LoggingHooks defines a set of logging hooks to be used by the session.
 // Default value is DefaultLoggingHooks.
 func LoggingHooks(trace *SessionTrace) SessionOption {
-	return func(c *sessionConfig) {
+	return func(c *SessionConfig) {
 		c.trace = trace
 	}
 }
@@ -102,14 +102,14 @@ const (
 )
 
 // Deliver a new network connection to the address defined in the configuration.
-func newConnection(ctx context.Context, m *sessionConfig) (conn net.Conn, err error) {
+func newConnection(ctx context.Context, m *SessionConfig) (conn net.Conn, err error) {
 	m.trace.ConnectStart(m)
 	defer m.trace.ConnectDone(m, err)
 	return net.Dial(m.network, m.address)
 }
 
-// Defines properties controlling session behaviour.
-type sessionConfig struct {
+// SessionConfig defines properties controlling session behaviour.
+type SessionConfig struct {
 	// Connection network, typically udp.
 	network string
 	// Network address/hostname with port, for example: 10.48.24.234:161
@@ -127,7 +127,7 @@ type sessionConfig struct {
 	// TODO Define additional configuration properties as required.
 }
 
-var defaultConfig = sessionConfig{
+var defaultConfig = SessionConfig{
 	network:   "udp",
 	address:   "",
 	community: "public",
