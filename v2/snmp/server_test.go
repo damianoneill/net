@@ -67,11 +67,21 @@ func TestHandleInform(t *testing.T) {
 		}).MaxTimes(1)
 	mockConn.EXPECT().Close().Return(nil)
 
-	config := defaultServerConfig
-	config.trace = DiagnosticServerHooks
-	config.resolveServerHooks()
 	h := newHandler()
-	h.wg.Add(1)
+	h.wg.Add(2)
+
+	config := defaultServerConfig
+
+	// Shoehorn a Done() of the WaitGroup into the WriteComplete hook.
+	// This mean we wait until the incoming inform message has been acknowledged.
+	hooks := *DiagnosticServerHooks
+	config.trace = &hooks
+	config.trace.WriteComplete = func(config *serverConfig, addr net.Addr, output []byte, err error) {
+		DiagnosticServerHooks.WriteComplete(config, addr, output, err)
+		h.wg.Done()
+	}
+	config.resolveServerHooks()
+
 	s := &serverImpl{config: &config, conn: mockConn, handler: h}
 	defer s.Close()
 
@@ -81,6 +91,7 @@ func TestHandleInform(t *testing.T) {
 	assert.NotZero(t, h.pdu.VarbindList[0].TypedValue.Value, "upTime should be defined")
 	assert.Equal(t, "1.3.6.1.1.2.3", h.pdu.VarbindList[1].TypedValue.String())
 	assert.Equal(t, "123456", h.pdu.VarbindList[2].TypedValue.String())
+
 }
 
 func TestInformAcknwoledgementFailure(t *testing.T) {
@@ -103,11 +114,21 @@ func TestInformAcknwoledgementFailure(t *testing.T) {
 		}).MaxTimes(1)
 	mockConn.EXPECT().Close().Return(nil)
 
-	config := defaultServerConfig
-	config.trace = DefaultServerHooks
-	config.resolveServerHooks()
 	h := newHandler()
-	h.wg.Add(1)
+	h.wg.Add(2)
+
+	config := defaultServerConfig
+
+	// Shoehorn a Done() of the WaitGroup into the WriteComplete hook.
+	// This mean we wait until the incoming inform message has been acknowledged.
+	hooks := *DefaultServerHooks
+	config.trace = &hooks
+	config.trace.WriteComplete = func(config *serverConfig, addr net.Addr, output []byte, err error) {
+		DefaultServerHooks.WriteComplete(config, addr, output, err)
+		h.wg.Done()
+	}
+	config.resolveServerHooks()
+
 	s := &serverImpl{config: &config, conn: mockConn, handler: h}
 	defer s.Close()
 

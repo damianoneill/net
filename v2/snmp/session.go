@@ -8,6 +8,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/geoffgarside/ber"
 )
@@ -61,7 +62,7 @@ type Varbind struct {
 
 type sessionImpl struct {
 	conn          net.Conn
-	config        *sessionConfig
+	config        *SessionConfig
 	nextRequestID int32
 }
 
@@ -199,16 +200,22 @@ func isOidDescendantOfRoot(oid asn1.ObjectIdentifier, rootOid string) bool {
 }
 
 func (m *sessionImpl) writePacket(b []byte) (err error) {
-	n, err := m.conn.Write(b)
-	m.config.trace.WriteComplete(m.config, b[0:n], err)
+	var n int
+	defer func(begin time.Time) {
+		m.config.trace.WriteDone(m.config, b[0:n], err, time.Since(begin))
+	}(time.Now())
+	n, err = m.conn.Write(b)
 	return
 }
 
 func (m *sessionImpl) readResponse() (input []byte, err error) {
 	input = make([]byte, maxInputBufferSize)
+	var n int
+	defer func(begin time.Time) {
+		m.config.trace.ReadDone(m.config, input[0:n], err, time.Since(begin))
+	}(time.Now())
 
-	n, err := m.conn.Read(input[:])
-	defer m.config.trace.ReadComplete(m.config, input[0:n], err)
+	n, err = m.conn.Read(input[:])
 	if err != nil {
 		return nil, err
 	}
