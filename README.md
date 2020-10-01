@@ -21,12 +21,12 @@ The library includes support for the following cross-cutting concerns through de
 * Metrics
 * Configuration
 
-The transport layer is externalized from the Library using dependency injection, allowing the user to choose and configure as their specific environment requires.  [Go Examples](https://github.com/damianoneill/net/blob/master/netconf/example_test.go) are included for demonstation purposes.
+The transport layer is externalized from the Library using dependency injection, allowing the user to choose and configure as their specific environment requires.  [Go Examples](https://github.com/damianoneill/net/blob/master/v2/netconf/client/example_test.go) are included for demonstration purposes.
 
-The package can be downloaded with the following command
+The package can be downloaded with the following command, note the v2 in the module path.
 
 ```bash
-go get -u github.com/damianoneill/net/...
+go get -u github.com/damianoneill/net/v2/...
 ```
 ## Credits
 
