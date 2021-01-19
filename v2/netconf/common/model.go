@@ -12,7 +12,7 @@ type Request interface{}
 
 // HelloMessage defines the message sent/received during session negotiation.
 type HelloMessage struct {
-	XMLName      xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 hello"`
+	XMLName      xml.Name `xml:" hello"`
 	Capabilities []string `xml:"capabilities>capability"`
 	SessionID    uint64   `xml:"session-id,omitempty"`
 }

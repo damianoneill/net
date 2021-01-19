@@ -23,8 +23,13 @@ type Encoder struct {
 
 // Encode encodes netconf message.
 func (e *Encoder) Encode(msg interface{}) error {
+	// Prepend xml document declaration to each message.
+	_, err := e.ncEncoder.Write([]byte(xml.Header))
+	if err != nil {
+		return err
+	}
 
-	err := e.xmlEncoder.Encode(msg)
+	err = e.xmlEncoder.Encode(msg)
 	if err != nil {
 		return err
 	}
@@ -47,4 +52,3 @@ func NewEncoder(t io.Writer) *Encoder {
 func EnableChunkedFraming(d *Decoder, e *Encoder) {
 	rfc6242.SetChunkedFraming(d.ncDecoder, e.ncEncoder)
 }
-
