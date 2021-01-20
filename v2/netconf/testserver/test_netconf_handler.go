@@ -233,11 +233,11 @@ func (h *SessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
 func (h *SessionHandler) handleToken(token xml.Token) {
 	switch token := token.(type) {
 	case xml.StartElement:
-		switch token.Name {
-		case common.NameHello: // <hello>
+		switch token.Name.Local {
+		case common.NameHello.Local: // <hello>
 			h.handleHello(token)
 
-		case common.NameRPC: // <rpc>
+		case common.NameRPC.Local: // <rpc>
 			h.handleRPC(token)
 
 		default:

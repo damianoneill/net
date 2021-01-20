@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/damianoneill/net/v2/netconf/common"
 
 	"github.com/damianoneill/net/v2/netconf/common/codec"
-
-	uuid "github.com/satori/go.uuid"
 
 	"io"
 	"sync"
@@ -210,14 +210,14 @@ func (si *sesImpl) handleIncomingMessages() {
 func (si *sesImpl) handleToken(token xml.Token) (err error) {
 	switch token := token.(type) {
 	case xml.StartElement:
-		switch token.Name {
-		case common.NameHello: // <hello>
+		switch token.Name.Local {
+		case common.NameHello.Local: // <hello>
 			err = si.handleHello(token)
 
-		case common.NameRPCReply: // <rpc-reply>
+		case common.NameRPCReply.Local: // <rpc-reply>
 			err = si.handleRPCReply(token)
 
-		case common.NameNotification: // <notification>
+		case common.NameNotification.Local: // <notification>
 			err = si.handleNotification(token)
 
 		default:
