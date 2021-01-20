@@ -11,8 +11,9 @@ import (
 type Request interface{}
 
 // HelloMessage defines the message sent/received during session negotiation.
+// nolint: govet
 type HelloMessage struct {
-	XMLName      xml.Name `xml:" hello"`
+	XMLName      xml.Name `xml:" hello"` // space required before hello in XMLName tag
 	Capabilities []string `xml:"capabilities>capability"`
 	SessionID    uint64   `xml:"session-id,omitempty"`
 }
