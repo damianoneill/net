@@ -114,6 +114,24 @@ func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
 	ncs.Close()
 }
 
+func TestNewSessionWithNoChunkedCodec(t *testing.T) {
+
+	ts := testserver.NewTestNetconfServer(t)
+	ncs := newNCClientSessionWithConfig(t, ts, &Config{DisableChunkedCodec: true})
+	defer ncs.Close()
+
+	sh := ts.SessionHandler(ncs.ID())
+	assert.Nil(t, sh.LastReq(), "No requests should have been executed")
+
+	reply, err := ncs.Execute(common.Request(`<get><response/></get>`))
+	assert.NoError(t, err, "Not expecting exec to fail")
+	assert.NotNil(t, reply, "Reply should be non-nil")
+	assert.Equal(t, `<data><response/></data>`, reply.Data, "Reply should contain response data")
+	assert.Equal(t, 1, sh.ReqCount(), "Expected request count to be 1")
+	assert.Equal(t, "get", sh.LastReq().XMLName.Local, "Expected GET request")
+	assert.Equal(t, "<response/>", sh.LastReq().Body, "Expected request body")
+}
+
 func TestExecuteAsync(t *testing.T) {
 
 	ncs := newNCClientSession(t, testserver.NewTestNetconfServer(t))
@@ -293,6 +311,18 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session 
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	s, err := NewRPCSession(context.Background(), sshConfig, serverAddress)
+	assert.NoError(t, err, "Failed to create session")
+	return s
+}
+
+func newNCClientSessionWithConfig(t assert.TestingT, ts *testserver.TestNCServer, cfg *Config) Session {
+	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
+	sshConfig := &ssh.ClientConfig{
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, serverAddress, cfg)
 	assert.NoError(t, err, "Failed to create session")
 	return s
 }

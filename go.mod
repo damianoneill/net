@@ -1,6 +1,6 @@
 module github.com/damianoneill/net
 
-go 1.13
+go 1.15
 
 require (
 	github.com/damianoneill/net/v2 v2.3.0 // indirect
