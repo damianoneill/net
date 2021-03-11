@@ -85,6 +85,12 @@ var DefaultCapabilities = []string{
 	CapXpath,
 }
 
+// NoChunkedCodecCapabilities sets omits chunked codec capability.
+var NoChunkedCodecCapabilities = []string{
+	CapBase10,
+	CapXpath,
+}
+
 // Define xml names for different netconf messages.
 var (
 	NameHello        = xml.Name{Space: NetconfNS, Local: "hello"}

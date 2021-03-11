@@ -85,7 +85,7 @@ func NewSession(ctx context.Context, t Transport, cfg *Config) (Session, error) 
 		hellochan: make(chan bool)}
 
 	// Send hello
-	err := si.enc.Encode(&common.HelloMessage{Capabilities: common.DefaultCapabilities})
+	err := si.enc.Encode(&common.HelloMessage{Capabilities: si.clientCapabilities()})
 	if err != nil {
 		si.trace.Error("Failed to encode hello", si.target, err)
 		si.Close()
@@ -102,6 +102,13 @@ func NewSession(ctx context.Context, t Transport, cfg *Config) (Session, error) 
 		return nil, err
 	}
 	return si, nil
+}
+
+func (si *sesImpl) clientCapabilities() []string {
+	if si.cfg.DisableChunkedCodec {
+		return common.NoChunkedCodecCapabilities
+	}
+	return common.DefaultCapabilities
 }
 
 func (si *sesImpl) Execute(req common.Request) (reply *common.RPCReply, err error) {
@@ -235,7 +242,7 @@ func (si *sesImpl) handleHello(token xml.StartElement) (err error) {
 		return
 	}
 
-	if common.PeerSupportsChunkedFraming(si.hello.Capabilities) {
+	if !si.cfg.DisableChunkedCodec && common.PeerSupportsChunkedFraming(si.hello.Capabilities) {
 		// Update the codec to use chunked framing from now.
 		codec.EnableChunkedFraming(si.dec, si.enc)
 	}

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"github.com/imdario/mergo"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -19,12 +20,16 @@ func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string)
 // a netconf session with the client configuration.
 func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target string, cfg *Config) (s Session, err error) {
 
+	// Use supplied config, but apply any defaults to unspecified values.
+	var resolvedConfig Config = *cfg
+	_ = mergo.Merge(&resolvedConfig, DefaultConfig)
+
 	var t Transport
 	if t, err = createTransport(ctx, sshcfg, target); err != nil {
 		return
 	}
 
-	if s, err = NewSession(ctx, t, cfg); err != nil {
+	if s, err = NewSession(ctx, t, &resolvedConfig); err != nil {
 		t.Close() // nolint: gosec,errcheck
 	}
 	return
