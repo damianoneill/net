@@ -116,7 +116,7 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 
 // CloseRequestHandler closes the transport channel on request receipt.
 var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
-	h.ch.Close() //nolint:gosec
+	_ = h.ch.Close()
 }
 
 // IgnoreRequestHandler does in nothing on receipt of a request.
@@ -173,7 +173,7 @@ func (h *SessionHandler) SendNotification(body string) *SessionHandler {
 
 // Close initiates session tear-down by closing the underlying transport channel.
 func (h *SessionHandler) Close() {
-	h.ch.Close() //nolint:gosec
+	_ = h.ch.Close()
 }
 
 func (h *SessionHandler) waitForClientHello() {

@@ -1,3 +1,4 @@
+//nolint: dupl
 package rfc6242
 
 import (
@@ -78,6 +79,7 @@ func TestEOMDecoding(t *testing.T) {
 		},
 	}
 
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			transport := newTransport()
@@ -132,6 +134,7 @@ func TestFramerTransition(t *testing.T) {
 		},
 	}
 
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			transport := newTransport()
@@ -140,7 +143,6 @@ func TestFramerTransition(t *testing.T) {
 
 			buffer := make([]byte, tt.buflen)
 			for i, resp := range tt.responses {
-
 				transport.Write(resp.inputs, i == len(tt.responses)-1)
 
 				count, err := d.Read(buffer)
@@ -159,6 +161,7 @@ func TestFramerTransition(t *testing.T) {
 	}
 }
 
+//nolint: funlen
 func TestChunkedFramer(t *testing.T) {
 	type decresp struct {
 		inputs     []string
@@ -250,6 +253,7 @@ func TestChunkedFramer(t *testing.T) {
 		},
 	}
 
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			transport := newTransport()
@@ -258,7 +262,6 @@ func TestChunkedFramer(t *testing.T) {
 
 			buffer := make([]byte, tt.buflen)
 			for i, resp := range tt.responses {
-
 				transport.Write(resp.inputs, i == len(tt.responses)-1)
 
 				count, err := d.Read(buffer)

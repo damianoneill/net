@@ -18,6 +18,7 @@ func TestEOMEncoding(t *testing.T) {
 		{"EmptyMessage", []string{""}, false, ""},
 	}
 
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := bytes.NewBuffer([]byte{})
@@ -53,6 +54,7 @@ func TestChunkedEncoding(t *testing.T) {
 		{"ChunkedMessage", 5, []string{"ABCDEFGH"}, true, "\n#5\n" + "ABCDE" + "\n#3\n" + "FGH" + "\n##\n"},
 	}
 
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := bytes.NewBuffer([]byte{})

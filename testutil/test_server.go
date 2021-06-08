@@ -55,7 +55,6 @@ func (ts *SSHServer) Close() {
 }
 
 func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, factory HandlerFactory) {
-	//nolint:errcheck
 	for {
 		nConn, err := listener.Accept()
 		if err != nil {

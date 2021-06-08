@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-
+//nolint: gomnd
 package rfc6242
 
 import (
@@ -43,7 +43,6 @@ var tokenEOM = []byte("]]>]]>")
 
 // decoderEndOfMessage is the NETCONF 1.0 end-of-message delimited
 // decoding function.
-// nolint: gocyclo
 func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	d.eofOK = false
 	var i int
@@ -101,11 +100,11 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 			}
 		}
 	}
-	return
+	return advance, token, err
 }
 
 // decoderChunked is the NETCONF 1.1 chunked framing decoder function.
-// nolint : gocyclo
+//nolint: gocyclo
 func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	if d.scanErr != nil {
 		err = d.scanErr
@@ -171,7 +170,7 @@ func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte
 		}
 	}
 
-	return
+	return advance, token, err
 }
 
 type chunkHeaderAction int
@@ -244,11 +243,11 @@ func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksi
 		if len(b) > 8 {
 			got = b[:8]
 		} else {
-			got = b[:]
+			got = b
 		}
 		err = chunkHeaderLexError{got: got, want: []byte("\n#")}
 	}
-	return
+	return action, advance, chunksize, err
 }
 
 type chunkHeaderLexError struct{ got, want, wexplicit []byte }
