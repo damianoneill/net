@@ -9,7 +9,6 @@ import (
 )
 
 func TestUnmarshalVariable(t *testing.T) {
-
 	tests := []struct {
 		name      string
 		input     *asn1.RawValue
@@ -36,9 +35,7 @@ func TestUnmarshalVariable(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			tv, err := unmarshalVariable(tt.input)
-
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("unmarshalVariable error = %v, wantErr %v", err, tt.wantErr)
@@ -77,13 +74,11 @@ func TestTypedVariableStringRepresentation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			result := tt.input.String()
 
 			if result != tt.wantString {
 				t.Errorf("String type = %s, want %s got %s", tt.name, tt.wantString, result)
 			}
-
 		})
 	}
 }
@@ -102,13 +97,11 @@ func TestTypedVariableIntegerRepresentation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			result := tt.input.Int()
 
 			if result != tt.want {
 				t.Errorf("Integer type = %s, want %d got %d", tt.name, tt.want, result)
 			}
-
 		})
 	}
 

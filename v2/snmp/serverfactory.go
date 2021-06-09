@@ -21,7 +21,6 @@ func NewServerFactory() ServerFactory {
 type serverFactoryImpl struct{}
 
 func (f *serverFactoryImpl) NewServer(ctx context.Context, handler Handler, opts ...ServerOption) (Server, error) {
-
 	config := defaultServerConfig
 	for _, opt := range opts {
 		opt(&config)

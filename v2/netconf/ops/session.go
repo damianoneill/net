@@ -171,7 +171,6 @@ func (s *sImpl) GetSchemas() ([]Schema, error) {
 func (s *sImpl) GetSchema(id, version, format string) (string, error) {
 	req := createGetShemaRequest(id, version, format)
 	rply, err := s.Session.Execute(req)
-
 	if err != nil {
 		return "", err
 	}

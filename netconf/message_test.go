@@ -13,7 +13,6 @@ import (
 )
 
 func TestNewSessionWithChunkedEncoding(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	sh := ts.SessionHandler(ncs.ID())
@@ -30,7 +29,6 @@ func TestNewSessionWithChunkedEncoding(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
@@ -48,7 +46,6 @@ func TestExecute(t *testing.T) {
 }
 
 func TestExecuteWithFailingRequest(t *testing.T) {
-
 	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(FailingRequestHandler))
 	defer ncs.Close()
 
@@ -59,7 +56,6 @@ func TestExecuteWithFailingRequest(t *testing.T) {
 }
 
 func TestExecuteFailure(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	defer ncs.Close()
@@ -75,7 +71,6 @@ func TestExecuteFailure(t *testing.T) {
 }
 
 func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
-
 	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithCapabilities([]string{CapBase10}))
 
 	assert.False(t, peerSupportsChunkedFraming(ncs.(*sesImpl).hello.Capabilities), "Server not expected to support chunked framing")
@@ -88,7 +83,6 @@ func TestNewSessionWithEndOfMessageEncoding(t *testing.T) {
 }
 
 func TestExecuteAsync(t *testing.T) {
-
 	ncs := newNCClientSession(t, NewTestNetconfServer(t))
 	defer ncs.Close()
 
@@ -111,7 +105,6 @@ func TestExecuteAsync(t *testing.T) {
 }
 
 func TestExecuteAsyncUnfulfilled(t *testing.T) {
-
 	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(CloseRequestHandler))
 	defer ncs.Close()
 
@@ -123,7 +116,6 @@ func TestExecuteAsyncUnfulfilled(t *testing.T) {
 }
 
 func TestExecuteAsyncInterrupted(t *testing.T) {
-
 	ncs := newNCClientSession(t, NewTestNetconfServer(t).WithRequestHandler(IgnoreRequestHandler))
 	defer ncs.Close()
 
@@ -136,7 +128,6 @@ func TestExecuteAsyncInterrupted(t *testing.T) {
 }
 
 func TestSubscribe(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 	sh := ts.SessionHandler(ncs.ID())
@@ -178,7 +169,6 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestConcurrentExecute(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 
@@ -194,7 +184,6 @@ func TestConcurrentExecute(t *testing.T) {
 				assert.NoError(t, err, "Not expecting exec to fail")
 				assert.Equal(t, replybody, reply.Data, "Reply should contain response data")
 			}
-
 		}(r)
 	}
 	wg.Wait()
@@ -203,7 +192,6 @@ func TestConcurrentExecute(t *testing.T) {
 }
 
 func TestConcurrentExecuteAsync(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 	ncs := newNCClientSession(t, ts)
 
@@ -231,7 +219,6 @@ func TestConcurrentExecuteAsync(t *testing.T) {
 }
 
 func BenchmarkExecute(b *testing.B) {
-
 	ncs := newNCClientSession(b, NewTestNetconfServer(b))
 
 	for n := 0; n < b.N; n++ {
@@ -240,7 +227,6 @@ func BenchmarkExecute(b *testing.B) {
 }
 
 func BenchmarkTemplateParallel(b *testing.B) {
-
 	ncs := newNCClientSession(b, NewTestNetconfServer(b))
 
 	b.RunParallel(func(pb *testing.PB) {

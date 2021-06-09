@@ -17,14 +17,12 @@ import (
 )
 
 func TestTransportFailure(t *testing.T) {
-
 	s, err := NewRPCSession(context.Background(), &ssh.ClientConfig{}, "localhost:0")
 	assert.Error(t, err, "Expecting new session to fail")
 	assert.Nil(t, s, "Session should be nil")
 }
 
 func TestSessionSetupFailure(t *testing.T) {
-
 	ts := testserver.NewSSHServer(t, testserver.TestUserName, testserver.TestPassword)
 	defer ts.Close()
 
@@ -41,7 +39,6 @@ func TestSessionSetupFailure(t *testing.T) {
 }
 
 func TestSessionSetupSuccess(t *testing.T) {
-
 	ts := testserver.NewTestNetconfServer(t)
 
 	sshConfig := &ssh.ClientConfig{
@@ -56,7 +53,6 @@ func TestSessionSetupSuccess(t *testing.T) {
 }
 
 func TestSessionWithHooks(t *testing.T) {
-
 	logged := exerciseSession(t, NoOpLoggingHooks)
 	assert.Equal(t, "", logged, "Nothing should be logged")
 
@@ -79,7 +75,6 @@ func TestSessionWithHooks(t *testing.T) {
 }
 
 func exerciseSession(t *testing.T, hooks *ClientTrace) string {
-
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
 	log.SetOutput(w)

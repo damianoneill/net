@@ -13,7 +13,6 @@ import (
 )
 
 func TestHandleTrap(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockPacketConn(mockCtrl)
@@ -48,7 +47,6 @@ func TestHandleTrap(t *testing.T) {
 }
 
 func TestHandleInform(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockPacketConn(mockCtrl)
@@ -91,11 +89,9 @@ func TestHandleInform(t *testing.T) {
 	assert.NotZero(t, h.pdu.VarbindList[0].TypedValue.Value, "upTime should be defined")
 	assert.Equal(t, "1.3.6.1.1.2.3", h.pdu.VarbindList[1].TypedValue.String())
 	assert.Equal(t, "123456", h.pdu.VarbindList[2].TypedValue.String())
-
 }
 
 func TestInformAcknwoledgementFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockPacketConn(mockCtrl)
@@ -141,7 +137,6 @@ func TestInformAcknwoledgementFailure(t *testing.T) {
 }
 
 func TestIgnoringUnsupportedMessageType(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockPacketConn(mockCtrl)
@@ -175,7 +170,6 @@ func TestIgnoringUnsupportedMessageType(t *testing.T) {
 }
 
 func TestMessageParseFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockPacketConn(mockCtrl)

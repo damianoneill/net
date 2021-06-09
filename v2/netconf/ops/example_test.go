@@ -11,7 +11,6 @@ import (
 )
 
 func ExampleOpSession_GetSubtree_usingStrings() {
-
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
@@ -40,7 +39,6 @@ func ExampleOpSession_GetSubtree_usingStrings() {
 }
 
 func ExampleOpSession_GetSubtree_usingStructs() {
-
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
@@ -84,7 +82,6 @@ func ExampleOpSession_GetSubtree_usingStructs() {
 }
 
 func ExampleOpSession_GetXpath() {
-
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
@@ -113,7 +110,6 @@ func ExampleOpSession_GetXpath() {
 }
 
 func ExampleOpSession_GetConfigSubtree() {
-
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{
@@ -157,7 +153,6 @@ func ExampleOpSession_GetConfigSubtree() {
 }
 
 func ExampleOpSession_GetSchema() {
-
 	ts := testserver.NewTestNetconfServer(nil).WithRequestHandler(testserver.SmartRequesttHandler)
 
 	sshConfig := &ssh.ClientConfig{

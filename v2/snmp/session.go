@@ -95,12 +95,14 @@ const maxInputBufferSize = 65535
 // Supported SNMP message types.
 type messageType byte
 
-const getMessage = 0xA0
-const getNextMessage = 0xA1
-const getBulkMessage = 0xA5
-const getResponse = 0xA2
-const inform = 0xA6
-const v2Trap = 0xA7
+const (
+	getMessage     = 0xA0
+	getNextMessage = 0xA1
+	getBulkMessage = 0xA5
+	getResponse    = 0xA2
+	inform         = 0xA6
+	v2Trap         = 0xA7
+)
 
 func (m *sessionImpl) Get(ctx context.Context, oids []string) (*PDU, error) {
 	return m.executeGet(ctx, getMessage, oids, 0, 0)
@@ -131,7 +133,6 @@ func (m *sessionImpl) Close() error {
 // non-repeaters and max-repetitions values.
 // Returns a PDU with the resolved variable bindings.
 func (m *sessionImpl) executeGet(ctx context.Context, getType messageType, oids []string, nonRepeaters, maxRepetitions int) (*PDU, error) {
-
 	// TODO Validate OIDs on entry.
 
 	// Keep trying until we succeed, a non-timeout error occurs or the retry limit is reached.
@@ -169,7 +170,6 @@ func (m *sessionImpl) executeGet(ctx context.Context, getType messageType, oids 
 
 // Generic Walk execution.
 func (m *sessionImpl) executeWalk(ctx context.Context, mType messageType, maxRepetitions int, rootOid string, walker Walker) error {
-
 	nextOid := rootOid
 	for {
 		pdu, err := m.executeGet(ctx, mType, []string{nextOid}, 0, maxRepetitions)
@@ -230,7 +230,6 @@ func (m *sessionImpl) readResponse() (input []byte, err error) {
 
 // Parses the packet returned by a get request, returning the PDU with the resolved variable bindings.
 func (m *sessionImpl) parseResponse(input []byte) (*PDU, error) {
-
 	// We use a BER unmarshaler; this is unaware of SNMP RawPdu and data types.
 	// Consequently, there are 3 stages to the unmarshalling.
 	// Stage 1: the packet envelope is unmarshalled but the PDU is left as a raw ASN1 value.
@@ -259,7 +258,6 @@ func (m *sessionImpl) parseResponse(input []byte) (*PDU, error) {
 }
 
 func unmarshalValues(raw *rawPDU) (*PDU, error) {
-
 	pdu := &PDU{
 		RequestID:   raw.RequestID,
 		Error:       raw.Error,
@@ -323,7 +321,6 @@ func buildVarbindList(oids []string) []rawVarbind {
 }
 
 func oidToInts(input string) []int {
-
 	// Remove leading/trailing periods and split into oid components.
 	oidValues := strings.Split(strings.Trim(input, "."), ".")
 

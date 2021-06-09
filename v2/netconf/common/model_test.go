@@ -7,7 +7,6 @@ import (
 )
 
 func TestRPCErrorString(t *testing.T) {
-
 	err := &RPCError{
 		Severity: "Severity",
 		Message:  "Message",

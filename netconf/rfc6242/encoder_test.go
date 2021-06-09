@@ -6,7 +6,6 @@ import (
 )
 
 func TestEOMEncoding(t *testing.T) {
-
 	tests := []struct {
 		name   string
 		inputs []string
@@ -21,7 +20,6 @@ func TestEOMEncoding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			buf := bytes.NewBuffer([]byte{})
 			e := NewEncoder(buf)
 
@@ -57,7 +55,6 @@ func TestChunkedEncoding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			buf := bytes.NewBuffer([]byte{})
 			e := NewEncoder(buf, WithMaximumChunkSize(tt.chunksz))
 			SetChunkedFraming(e)

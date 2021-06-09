@@ -77,6 +77,7 @@ type RPCReplyMessage struct {
 	RawReply  string            `xml:"-"`
 	MessageID string            `xml:"message-id,attr"`
 }
+
 type replyData struct {
 	XMLName xml.Name `xml:"data"`
 	Data    string   `xml:",innerxml"`
@@ -108,7 +109,8 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 	reply := &RPCReplyMessage{
 		MessageID: req.MessageID,
 		Errors: []common.RPCError{
-			{Severity: "error", Message: "oops"}},
+			{Severity: "error", Message: "oops"},
+		},
 	}
 	err := h.encode(reply)
 	assert.NoError(h.t, err, "Failed to encode response")
@@ -124,7 +126,6 @@ var IgnoreRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {}
 
 // SmartRequesttHandler responds to common requests with trivial content.
 var SmartRequesttHandler = func(h *SessionHandler, req *rpcRequestMessage) {
-
 	data := replyData{Data: responseFor(req)}
 	reply := &RPCReplyMessage{Data: data, MessageID: req.MessageID}
 	err := h.encode(reply)
@@ -155,7 +156,8 @@ func responseFor(req *rpcRequestMessage) string {
 func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolint: deadcode
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	return &SessionHandler{t: t,
+	return &SessionHandler{
+		t:            t,
 		sid:          sid,
 		hellochan:    make(chan bool),
 		startwg:      wg,
@@ -206,7 +208,6 @@ func (h *SessionHandler) Close() {
 }
 
 func (h *SessionHandler) waitForClientHello() {
-
 	// Wait for the input handler to send the client hello.
 	select {
 	case <-h.hellochan:
@@ -217,7 +218,6 @@ func (h *SessionHandler) waitForClientHello() {
 }
 
 func (h *SessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
-
 	defer wg.Done()
 
 	// Loop, looking for a start element type of hello, rpc-reply.
@@ -252,7 +252,6 @@ func (h *SessionHandler) handleHello(token xml.StartElement) {
 	h.decodeElement(&h.ClientHello, &token)
 
 	if common.PeerSupportsChunkedFraming(h.ClientHello.Capabilities) && common.PeerSupportsChunkedFraming(h.capabilities) {
-
 		// Update the codec to use chunked framing from now.
 		codec.EnableChunkedFraming(h.dec, h.enc)
 	}

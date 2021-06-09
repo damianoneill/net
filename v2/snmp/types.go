@@ -63,7 +63,6 @@ const (
 // Unmarshals an asn1 RawValue contqining a single variable to deliver a TypedValue that encapsulates the variable type and
 // the golang representation of the variable value.
 func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
-
 	switch raw.Class {
 	case asn1.ClassUniversal:
 		switch raw.Tag {

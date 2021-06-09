@@ -39,9 +39,7 @@ var (
 	ErrChunkSizeTooLarge = errors.New("chunk size larger than maximum (4294967295)")
 )
 
-var (
-	tokenEOM = []byte("]]>]]>")
-)
+var tokenEOM = []byte("]]>]]>")
 
 // decoderEndOfMessage is the NETCONF 1.0 end-of-message delimited
 // decoding function.
@@ -247,7 +245,7 @@ func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksi
 		if len(b) > 8 {
 			got = b[:8]
 		} else {
-			got = b[:len(b)]
+			got = b[:]
 		}
 		err = chunkHeaderLexError{got: got, want: []byte("\n#")}
 	}

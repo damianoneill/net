@@ -97,6 +97,7 @@ type RpcReplyMessage struct {
 	RawReply  string            `xml:"-"`
 	MessageID string            `xml:"message-id,attr"`
 }
+
 type ReplyData struct {
 	XMLName xml.Name `xml:"data"`
 	Data    string   `xml:",innerxml"`
@@ -109,7 +110,6 @@ type RequestHandler func(h *SessionHandler, req *RpcRequestMessage)
 // NewServer creates a new Server that will accept Netconf localhost connections on an ephemeral port (available
 // via Port()), with credentials defined by the sshcfg configuration.
 func NewServer(ctx context.Context, address string, port int, sshcfg *xssh.ServerConfig, sf SessionFactory) (ncs *Server, err error) {
-
 	trace := ContextNetconfTrace(ctx)
 	if trace.Trace != nil && ssh.ContextSshTrace(ctx) == nil {
 		ctx = ssh.WithSshTrace(ctx, trace.Trace)
@@ -192,7 +192,6 @@ func (h *SessionHandler) Close() {
 }
 
 func (h *SessionHandler) waitForClientHello() bool {
-
 	// Wait for the input handler to send the client hello.
 	select {
 	case <-h.hellochan:
@@ -204,7 +203,6 @@ func (h *SessionHandler) waitForClientHello() bool {
 }
 
 func (h *SessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
-
 	defer wg.Done()
 
 	// Loop, looking for a start element type of hello, rpc.
@@ -236,7 +234,6 @@ func (h *SessionHandler) handleHello(token xml.StartElement) {
 	err := h.decodeElement(&h.ClientHello, &token)
 	if err == nil {
 		if common.PeerSupportsChunkedFraming(h.ClientHello.Capabilities) && common.PeerSupportsChunkedFraming(h.capabilities) {
-
 			// Update the codec to use chunked framing from now.
 			codec.EnableChunkedFraming(h.dec, h.enc)
 		}

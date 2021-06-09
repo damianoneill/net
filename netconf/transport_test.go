@@ -13,7 +13,6 @@ import (
 )
 
 func TestSuccessfulConnection(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
@@ -30,7 +29,6 @@ func TestSuccessfulConnection(t *testing.T) {
 }
 
 func TestFailingConnection(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
@@ -47,7 +45,6 @@ func TestFailingConnection(t *testing.T) {
 }
 
 func TestWriteRead(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
@@ -69,7 +66,6 @@ func TestWriteRead(t *testing.T) {
 }
 
 func TestTrace(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
@@ -93,7 +89,6 @@ func TestTrace(t *testing.T) {
 		},
 		ReadStart: func(p []byte) {
 			traces = append(traces, "ReadStart called")
-
 		},
 		ReadDone: func(p []byte, c int, err error, d time.Duration) {
 			traces = append(traces, fmt.Sprintf("ReadDone %s %d %v", string(p[:c]), c, err))

@@ -12,7 +12,6 @@ import (
 )
 
 func TestGet(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -95,7 +94,6 @@ func TestGet(t *testing.T) {
 }
 
 func TestGetNext(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -177,7 +175,6 @@ func TestGetNext(t *testing.T) {
 }
 
 func TestGetBulk(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -294,7 +291,6 @@ func TestGetBulk(t *testing.T) {
 }
 
 func TestWalk(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -434,7 +430,6 @@ func TestWalk(t *testing.T) {
 }
 
 func TestNetworkWriteFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -460,7 +455,6 @@ func TestNetworkWriteFailure(t *testing.T) {
 }
 
 func TestSetDeadlineFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -485,7 +479,6 @@ func TestSetDeadlineFailure(t *testing.T) {
 }
 
 func TestNetworkReadFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -537,7 +530,6 @@ func TestNetworkReadFailure(t *testing.T) {
 }
 
 func TestUnmarshalPacketFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -598,7 +590,6 @@ func TestUnmarshalPacketFailure(t *testing.T) {
 }
 
 func TestWalkWalkerFailure(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -677,7 +668,6 @@ func TestWalkWalkerFailure(t *testing.T) {
 }
 
 func TestBulkWalk(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -774,15 +764,16 @@ type timeoutError struct{}
 func (to *timeoutError) Error() string {
 	return "timeout"
 }
+
 func (to *timeoutError) Timeout() bool {
 	return true
 }
+
 func (to *timeoutError) Temporary() bool {
 	return false
 }
 
 func TestRetry(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -891,7 +882,6 @@ func TestRetry(t *testing.T) {
 }
 
 func TestEndOfMib(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -974,7 +964,6 @@ func TestEndOfMib(t *testing.T) {
 }
 
 func TestNoSuchObject(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)
@@ -1055,7 +1044,6 @@ func TestNoSuchObject(t *testing.T) {
 }
 
 func TestNoSuchInstance(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockConn := mocks.NewMockConn(mockCtrl)

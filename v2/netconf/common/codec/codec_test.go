@@ -14,7 +14,6 @@ type testStr struct {
 }
 
 func TestEncoderFailures(t *testing.T) {
-
 	// Failure on write of message
 	mockt := &mocks.Transport{}
 	mockt.On("Write", mock.Anything).Return(0, errors.New("Failed"))
@@ -34,7 +33,6 @@ func TestEncoderFailures(t *testing.T) {
 }
 
 func TestEnableChunkedFraming(t *testing.T) {
-
 	enc := NewEncoder(nil)
 	dec := NewDecoder(nil)
 

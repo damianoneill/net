@@ -23,7 +23,6 @@ func NewFactory() SessionFactory {
 type factoryImpl struct{}
 
 func (f *factoryImpl) NewSession(ctx context.Context, target string, opts ...SessionOption) (Session, error) {
-
 	config := defaultConfig
 	config.address = target
 	for _, opt := range opts {

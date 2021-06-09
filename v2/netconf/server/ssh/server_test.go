@@ -33,7 +33,6 @@ func handlerFactory() HandlerFactory {
 }
 
 func TestServer(t *testing.T) {
-
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
@@ -63,7 +62,6 @@ func TestServer(t *testing.T) {
 }
 
 func TestServerListenFailure(t *testing.T) {
-
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
@@ -75,7 +73,6 @@ func TestServerListenFailure(t *testing.T) {
 }
 
 func TestServerConnectionFailure(t *testing.T) {
-
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
@@ -100,7 +97,6 @@ func TestServerConnectionFailure(t *testing.T) {
 }
 
 func TestServerDiagnosticTraceHooks(t *testing.T) {
-
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
@@ -130,7 +126,6 @@ func TestServerDiagnosticTraceHooks(t *testing.T) {
 }
 
 func TestServerNoOpTraceHooks(t *testing.T) {
-
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 

@@ -2,13 +2,12 @@ package testserver
 
 import (
 	"bufio"
-	"encoding/pem"
-	"fmt"
-	"net"
-
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+	"net"
 
 	assert "github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
@@ -31,14 +30,12 @@ type HandlerFactory func(t assert.TestingT) SSHHandler
 // NewSSHServer deflivers a new test SSH Server, with a Handler that simply echoes lines received.
 // The server implements password authentication with the given credentials.
 func NewSSHServer(t assert.TestingT, uname, password string) *SSHServer {
-
 	return NewSSHServerHandler(t, uname, password, func(t assert.TestingT) SSHHandler { return &echoer{} })
 }
 
 // NewSSHServerHandler deflivers a new test SSH Server, with a custom channel handler.
 // The server implements password authentication with the given credentials.
 func NewSSHServerHandler(t assert.TestingT, uname, password string, factory HandlerFactory) *SSHServer {
-
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err, "Listen failed")
 
