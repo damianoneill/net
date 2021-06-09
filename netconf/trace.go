@@ -19,7 +19,7 @@ func ContextClientTrace(ctx context.Context) *ClientTrace {
 	if trace == nil {
 		trace = NoOpLoggingHooks
 	} else {
-		mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+		mergo.Merge(trace, NoOpLoggingHooks) //nolint:errcheck
 	}
 	return trace
 }
@@ -28,9 +28,6 @@ func ContextClientTrace(ctx context.Context) *ClientTrace {
 // ctx. Netconf client requests made with the returned context will use
 // the provided trace hooks
 func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
-	// old := ContextClientTrace(ctx)
-	// trace.compose(old)
-
 	ctx = context.WithValue(ctx, clientEventContextKey{}, trace)
 	return ctx
 }

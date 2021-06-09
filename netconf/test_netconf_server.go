@@ -78,7 +78,7 @@ func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
 func (ncs *TestNCServer) Close() {
 	for k, v := range ncs.sessionHandlers {
 		if v.ch != nil {
-			v.Close() // nolint: gosec, errcheck
+			v.Close() //nolint:errcheck
 			ncs.sessionHandlers[k] = nil
 		}
 	}

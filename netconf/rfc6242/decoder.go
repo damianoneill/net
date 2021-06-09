@@ -93,7 +93,7 @@ func (d *Decoder) Read(b []byte) (n int, err error) {
 		d.pipedCount = len(token)
 		go func() {
 			if _, err = d.pw.Write(token); err != nil {
-				d.pr.CloseWithError(err) // nolint : gosec
+				d.pr.CloseWithError(err) //nolint:gosec
 			}
 		}()
 		n, err = d.pr.Read(b)

@@ -19,7 +19,7 @@ func TestSuccessfulConnection(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()
@@ -35,7 +35,7 @@ func TestFailingConnection(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("wrongPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()
@@ -51,7 +51,7 @@ func TestWriteRead(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()
@@ -72,7 +72,7 @@ func TestTrace(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	var traces []string

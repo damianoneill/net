@@ -14,7 +14,7 @@ func ExampleSession_Execute() {
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
@@ -42,7 +42,7 @@ func ExampleSession_ExecuteAsync() {
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
@@ -70,7 +70,7 @@ func ExampleSession_Subscribe() {
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
@@ -78,6 +78,7 @@ func ExampleSession_Subscribe() {
 	sh := ts.SessionHandler(s.ID())
 
 	nch := make(chan *Notification)
+	//nolint:lll
 	_, _ = s.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
 
 	// Get test server to send a notification in 500ms.

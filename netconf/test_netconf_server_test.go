@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+//nolint:lll
 const req = `<get>
     <filter type="subtree">
         <physical-ports xmlns="http://www.lumentum.com/lumentum-ote-port" xmlns:loteeth="http://www.lumentum.com/lumentum-ote-port-ethernet">
@@ -93,11 +94,8 @@ func exSession(t *testing.T, s Session, wg *sync.WaitGroup, reqCount int) {
 	defer wg.Done()
 	defer s.Close()
 	for e := 0; e < reqCount; e++ {
-
 		reply, _ := s.Execute(Request(req))
-
 		assert.NotNil(t, reply, "Execute failed unexpectedly")
-
 	}
 }
 
@@ -136,6 +134,6 @@ func sshConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 }

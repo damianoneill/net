@@ -143,6 +143,7 @@ func TestSubscribe(t *testing.T) {
 		wg.Done()
 	}()
 
+	//nolint:lll
 	reply, _ := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
 	assert.NotNil(t, reply, "create-subscription failed")
 	assert.NotNil(t, reply.Data, "create-subscription failed")
@@ -249,15 +250,15 @@ func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 	s, err := NewRPCSession(context.Background(), sshConfig, serverAddress)
 	assert.NoError(t, err, "Failed to create session")
 	return s
 }
 
+//nolint
 // Simple real NE access tests
-
 //func TestRealNewSession(t *testing.T) {
 //
 //	sshConfig := &ssh.ClientConfig{
@@ -308,6 +309,7 @@ func newNCClientSession(t assert.TestingT, ts *TestNCServer) Session {
 // 	assert.NoError(t, err, "Not expecting new session to fail")
 // 	assert.NotNil(t, ncs, "Session should be non-nil")
 
+//nolint
 // 	nchan := make(chan *Notification)
 // 	reply, err := ncs.Subscribe(Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nchan)
 // 	assert.NotNil(t, reply, "Reply should be non-nil")

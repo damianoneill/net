@@ -116,13 +116,13 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 
 // CloseRequestHandler closes the transport channel on request receipt.
 var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
-	h.ch.Close() // nolint: errcheck, gosec
+	h.ch.Close() //nolint:gosec
 }
 
 // IgnoreRequestHandler does in nothing on receipt of a request.
 var IgnoreRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {}
 
-func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &SessionHandler{
@@ -173,14 +173,14 @@ func (h *SessionHandler) SendNotification(body string) *SessionHandler {
 
 // Close initiates session tear-down by closing the underlying transport channel.
 func (h *SessionHandler) Close() {
-	h.ch.Close() // nolint: errcheck, gosec
+	h.ch.Close() //nolint:gosec
 }
 
 func (h *SessionHandler) waitForClientHello() {
 	// Wait for the input handler to send the client hello.
 	select {
 	case <-h.hellochan:
-	case <-time.After(time.Duration(5) * time.Second):
+	case <-time.After(time.Duration(5) * time.Second): //nolint:gomnd
 	}
 
 	assert.NotNil(h.t, h.ClientHello, "Failed to get client hello")
