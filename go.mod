@@ -13,7 +13,6 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989
 	github.com/segmentio/golines v0.4.0
-	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0
 	github.com/uw-labs/lichen v0.1.4
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
