@@ -12,7 +12,6 @@ import (
 )
 
 func ExampleSession_Execute() {
-
 	ts := testserver.NewTestNetconfServer(nil)
 
 	sshConfig := &ssh.ClientConfig{
@@ -23,7 +22,6 @@ func ExampleSession_Execute() {
 
 	serverAddress := fmt.Sprintf("localhost:%d", ts.Port())
 	s, err := NewRPCSession(context.Background(), sshConfig, serverAddress)
-
 	if err != nil {
 		fmt.Printf("Failed to start session %s\n", err)
 		return
@@ -42,7 +40,6 @@ func ExampleSession_Execute() {
 }
 
 func ExampleSession_ExecuteAsync() {
-
 	ts := testserver.NewTestNetconfServer(nil)
 
 	sshConfig := &ssh.ClientConfig{
@@ -71,7 +68,6 @@ func ExampleSession_ExecuteAsync() {
 }
 
 func ExampleSession_Subscribe() {
-
 	ts := testserver.NewTestNetconfServer(nil)
 
 	sshConfig := &ssh.ClientConfig{

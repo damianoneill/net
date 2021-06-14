@@ -13,14 +13,13 @@ import (
 )
 
 func TestSuccessfulConnection(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()
@@ -30,14 +29,13 @@ func TestSuccessfulConnection(t *testing.T) {
 }
 
 func TestFailingConnection(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("wrongPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()
@@ -47,14 +45,13 @@ func TestFailingConnection(t *testing.T) {
 }
 
 func TestWriteRead(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()
@@ -69,14 +66,13 @@ func TestWriteRead(t *testing.T) {
 }
 
 func TestTrace(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
 		User:            "testUser",
 		Auth:            []ssh.AuthMethod{ssh.Password("testPassword")},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	var traces []string
@@ -93,7 +89,6 @@ func TestTrace(t *testing.T) {
 		},
 		ReadStart: func(p []byte) {
 			traces = append(traces, "ReadStart called")
-
 		},
 		ReadDone: func(p []byte, c int, err error, d time.Duration) {
 			traces = append(traces, fmt.Sprintf("ReadDone %s %d %v", string(p[:c]), c, err))

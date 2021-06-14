@@ -39,9 +39,7 @@ var (
 	ErrChunkSizeTooLarge = errors.New("chunk size larger than maximum (4294967295)")
 )
 
-var (
-	tokenEOM = []byte("]]>]]>")
-)
+var tokenEOM = []byte("]]>]]>")
 
 // decoderEndOfMessage is the NETCONF 1.0 end-of-message delimited
 // decoding function.
@@ -83,7 +81,6 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 			// their peer has the appropriate capability (data
 			// contained within token).
 			if d.eofOK = i == len(tokenEOM); d.eofOK {
-
 				// If there is a pending framer, it can now take effect (see comment in decoder setFramer())
 				if d.pendingFramer != nil {
 					d.framer = d.pendingFramer
@@ -185,7 +182,7 @@ const (
 	chActionChunk
 )
 
-// nolint : gocyclo
+//nolint:gocyclo
 func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksize uint64, err error) {
 	// special case short blocks to detect specific errors. we will
 	// never be called with an empty b.
@@ -247,7 +244,7 @@ func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksi
 		if len(b) > 8 {
 			got = b[:8]
 		} else {
-			got = b[:len(b)]
+			got = b[:]
 		}
 		err = chunkHeaderLexError{got: got, want: []byte("\n#")}
 	}

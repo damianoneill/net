@@ -23,13 +23,13 @@ func (es *exampleServer) HandleRequest(req *RpcRequestMessage) *RpcReplyMessage 
 		return &RpcReplyMessage{Data: ReplyData{Data: `<top><sub attr="avalue"><child1>cvalue</child1></sub></top>`}, MessageID: req.MessageID}
 	case "get-config":
 		return &RpcReplyMessage{Errors: []common.RPCError{
-			{Severity: "error", Message: "oops"}}, MessageID: req.MessageID}
+			{Severity: "error", Message: "oops"},
+		}, MessageID: req.MessageID}
 	}
 	return nil
 }
 
 func ExampleNewServer() {
-
 	sshcfg, _ := ssh.PasswordConfig("UserA", "PassA")
 	server, _ := NewServer(context.Background(), "localhost", 0, sshcfg,
 		func(sh *SessionHandler) SessionCallback {

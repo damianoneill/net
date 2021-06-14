@@ -31,7 +31,6 @@ type tImpl struct {
 // and requesting the specified subsystem.
 // nolint : gosec
 func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
-
 	impl := tImpl{target: target}
 	impl.trace = ContextClientTrace(ctx)
 
@@ -42,7 +41,7 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 	}(time.Now())
 
 	defer func() {
-		// nolint: gosec, errcheck
+		//nolint:errcheck
 		if err != nil {
 			if impl.sshClient != nil {
 				impl.sshClient.Close()
@@ -97,7 +96,6 @@ func (t *tImpl) Write(p []byte) (n int, err error) {
 //
 // Errors are returned with priority matching the same order.
 func (t *tImpl) Close() (err error) {
-
 	defer t.trace.ConnectionClosed(t.target, err)
 
 	var (
@@ -138,7 +136,6 @@ func (t *tImpl) injectTraceReader() {
 }
 
 func (tr *traceReader) Read(p []byte) (c int, err error) {
-
 	tr.trace.ReadStart(p)
 	defer func(begin time.Time) {
 		tr.trace.ReadDone(p, c, err, time.Since(begin))

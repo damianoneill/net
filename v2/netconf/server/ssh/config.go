@@ -1,12 +1,11 @@
 package ssh
 
 import (
-	"encoding/pem"
-	"fmt"
-
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -19,7 +18,6 @@ func PasswordConfig(uname, password string) (*ssh.ServerConfig, error) {
 	}
 
 	hostKey, err := generateHostKey()
-
 	if err != nil {
 		return nil, err
 	}

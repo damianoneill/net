@@ -9,9 +9,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var (
-	nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
-)
+var nameRPC = xml.Name{Space: netconfNS, Local: "rpc"}
 
 // SessionHandler represents the server side of an active netconf SSH session.
 type SessionHandler struct {
@@ -77,6 +75,7 @@ type RPCReplyMessage struct {
 	RawReply  string     `xml:"-"`
 	MessageID string     `xml:"message-id,attr"`
 }
+
 type replyData struct {
 	XMLName xml.Name `xml:"data"`
 	Data    string   `xml:",innerxml"`
@@ -108,7 +107,8 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 	reply := &RPCReplyMessage{
 		MessageID: req.MessageID,
 		Errors: []RPCError{
-			{Severity: "error", Message: "oops"}},
+			{Severity: "error", Message: "oops"},
+		},
 	}
 	err := h.encode(reply)
 	assert.NoError(h.t, err, "Failed to encode response")
@@ -116,16 +116,17 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 
 // CloseRequestHandler closes the transport channel on request receipt.
 var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
-	h.ch.Close() // nolint: errcheck, gosec
+	h.ch.Close() //nolint:gosec
 }
 
 // IgnoreRequestHandler does in nothing on receipt of a request.
 var IgnoreRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {}
 
-func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	return &SessionHandler{t: t,
+	return &SessionHandler{
+		t:            t,
 		sid:          sid,
 		hellochan:    make(chan bool),
 		startwg:      wg,
@@ -172,22 +173,20 @@ func (h *SessionHandler) SendNotification(body string) *SessionHandler {
 
 // Close initiates session tear-down by closing the underlying transport channel.
 func (h *SessionHandler) Close() {
-	h.ch.Close() // nolint: errcheck, gosec
+	h.ch.Close() //nolint:gosec
 }
 
 func (h *SessionHandler) waitForClientHello() {
-
 	// Wait for the input handler to send the client hello.
 	select {
 	case <-h.hellochan:
-	case <-time.After(time.Duration(5) * time.Second):
+	case <-time.After(time.Duration(5) * time.Second): //nolint:gomnd
 	}
 
 	assert.NotNil(h.t, h.ClientHello, "Failed to get client hello")
 }
 
 func (h *SessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
-
 	defer wg.Done()
 
 	// Loop, looking for a start element type of hello, rpc-reply.
@@ -222,7 +221,6 @@ func (h *SessionHandler) handleHello(token xml.StartElement) {
 	h.decodeElement(&h.ClientHello, &token)
 
 	if peerSupportsChunkedFraming(h.ClientHello.Capabilities) && peerSupportsChunkedFraming(h.capabilities) {
-
 		// Update the codec to use chunked framing from now.
 		enableChunkedFraming(h.dec, h.enc)
 	}

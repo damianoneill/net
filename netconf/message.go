@@ -5,13 +5,12 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/satori/go.uuid"
-
-	"io"
-	"sync"
+	uuid "github.com/satori/go.uuid"
 )
 
 // The Message layer defines a set of base protocol operations
@@ -91,7 +90,6 @@ const (
 
 // NewSession creates a new Netconf session, using the supplied Transport.
 func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, error) {
-
 	si := &sesImpl{
 		cfg:    cfg,
 		t:      t,
@@ -100,7 +98,8 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 		enc:    newEncoder(t),
 		trace:  ContextClientTrace(ctx),
 
-		hellochan: make(chan bool)}
+		hellochan: make(chan bool),
+	}
 
 	// Send hello
 	err := si.enc.encode(&HelloMessage{Capabilities: DefaultCapabilities})
@@ -123,7 +122,6 @@ func NewSession(ctx context.Context, t Transport, cfg *ClientConfig) (Session, e
 }
 
 func (si *sesImpl) Execute(req Request) (reply *RPCReply, err error) {
-
 	si.trace.ExecuteStart(req, false)
 
 	defer func(begin time.Time) {
@@ -148,7 +146,6 @@ func (si *sesImpl) Execute(req Request) (reply *RPCReply, err error) {
 }
 
 func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
-
 	si.trace.ExecuteStart(req, true)
 	defer func(begin time.Time) {
 		si.trace.ExecuteDone(req, true, nil, err, time.Since(begin))
@@ -158,7 +155,6 @@ func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
 }
 
 func (si *sesImpl) execute(req Request, rchan chan *RPCReply) (err error) {
-
 	// Build the request to be submitted.
 	msg := &RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
 
@@ -197,7 +193,6 @@ func (si *sesImpl) ServerCapabilities() []string {
 }
 
 func (si *sesImpl) waitForServerHello() (err error) {
-
 	helloOk := false
 	select {
 	case helloOk = <-si.hellochan:
@@ -220,7 +215,6 @@ func peerSupportsChunkedFraming(caps []string) bool {
 }
 
 func (si *sesImpl) handleIncomingMessages() {
-
 	// When this goroutine finishes, make sure anytbody waiting for an async response or notification
 	// gets informed.
 	defer si.closeChannels()
@@ -367,7 +361,6 @@ func (si *sesImpl) pushRespChan(ch chan *RPCReply) {
 	si.rchLock.Lock()
 	defer si.rchLock.Unlock()
 	si.responseq = append(si.responseq, ch)
-
 }
 
 func (si *sesImpl) popRespChan() (ch chan *RPCReply) {

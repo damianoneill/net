@@ -12,14 +12,12 @@ import (
 // NewRPCSession connects to the  target using the ssh configuration, and establishes
 // a netconf session with default configuration.
 func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
-
 	return NewRPCSessionWithConfig(ctx, sshcfg, target, DefaultConfig)
 }
 
 // NewRPCSessionWithConfig connects to the  target using the ssh configuration, and establishes
 // a netconf session with the client configuration.
 func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target string, cfg *Config) (s Session, err error) {
-
 	// Use supplied config, but apply any defaults to unspecified values.
 	var resolvedConfig Config = *cfg
 	_ = mergo.Merge(&resolvedConfig, DefaultConfig)

@@ -5,6 +5,8 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -13,9 +15,6 @@ import (
 	"github.com/damianoneill/net/v2/netconf/common"
 
 	"github.com/damianoneill/net/v2/netconf/common/codec"
-
-	"io"
-	"sync"
 )
 
 // The Message layer defines a set of base protocol operations
@@ -73,7 +72,6 @@ type sesImpl struct {
 
 // NewSession creates a new Netconf session, using the supplied Transport.
 func NewSession(ctx context.Context, t Transport, cfg *Config) (Session, error) {
-
 	si := &sesImpl{
 		cfg:    cfg,
 		t:      t,
@@ -82,7 +80,8 @@ func NewSession(ctx context.Context, t Transport, cfg *Config) (Session, error) 
 		enc:    codec.NewEncoder(t),
 		trace:  ContextClientTrace(ctx),
 
-		hellochan: make(chan bool)}
+		hellochan: make(chan bool),
+	}
 
 	// Send hello
 	err := si.enc.Encode(&common.HelloMessage{Capabilities: si.clientCapabilities()})
@@ -112,7 +111,6 @@ func (si *sesImpl) clientCapabilities() []string {
 }
 
 func (si *sesImpl) Execute(req common.Request) (reply *common.RPCReply, err error) {
-
 	si.trace.ExecuteStart(req, false)
 
 	defer func(begin time.Time) {
@@ -137,7 +135,6 @@ func (si *sesImpl) Execute(req common.Request) (reply *common.RPCReply, err erro
 }
 
 func (si *sesImpl) ExecuteAsync(req common.Request, rchan chan *common.RPCReply) (err error) {
-
 	si.trace.ExecuteStart(req, true)
 	defer func(begin time.Time) {
 		si.trace.ExecuteDone(req, true, nil, err, time.Since(begin))
@@ -147,7 +144,6 @@ func (si *sesImpl) ExecuteAsync(req common.Request, rchan chan *common.RPCReply)
 }
 
 func (si *sesImpl) execute(req common.Request, rchan chan *common.RPCReply) (err error) {
-
 	// Build the request to be submitted.
 	msg := &common.RPCMessage{MessageID: uuid.NewV4().String(), Union: common.GetUnion(req)}
 
@@ -186,7 +182,6 @@ func (si *sesImpl) ServerCapabilities() []string {
 }
 
 func (si *sesImpl) waitForServerHello() (err error) {
-
 	select {
 	case <-si.hellochan:
 	case <-time.After(time.Duration(si.cfg.SetupTimeoutSecs) * time.Second):
@@ -196,7 +191,6 @@ func (si *sesImpl) waitForServerHello() (err error) {
 }
 
 func (si *sesImpl) handleIncomingMessages() {
-
 	// When this goroutine finishes, make sure anytbody waiting for an async response or notification
 	// gets informed.
 	defer si.closeChannels()
@@ -343,7 +337,6 @@ func (si *sesImpl) pushRespChan(ch chan *common.RPCReply) {
 	si.rchLock.Lock()
 	defer si.rchLock.Unlock()
 	si.responseq = append(si.responseq, ch)
-
 }
 
 func (si *sesImpl) popRespChan() (ch chan *common.RPCReply) {

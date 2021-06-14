@@ -58,7 +58,7 @@ type Notification struct {
 
 // NotificationMessage defines the notification message sent from the server.
 type NotificationMessage struct {
-	XMLName   xml.Name     //`xml:"notification"`
+	XMLName   xml.Name     // `xml:"notification"`
 	EventTime string       `xml:"eventTime"`
 	Event     Notification `xml:",any"`
 }

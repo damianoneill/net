@@ -47,7 +47,6 @@ func (s *serverImpl) handleMessages() {
 
 // Processes incoming messages.
 func (s *serverImpl) listen() error {
-
 	for {
 		input, addr, err := s.readMessage()
 		if err != nil {

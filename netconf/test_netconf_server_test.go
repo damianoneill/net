@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+//nolint:lll
 const req = `<get>
     <filter type="subtree">
         <physical-ports xmlns="http://www.lumentum.com/lumentum-ote-port" xmlns:loteeth="http://www.lumentum.com/lumentum-ote-port-ethernet">
@@ -18,9 +19,8 @@ const req = `<get>
 </get>`
 
 func TestMultipleTestServersWithoutChunkedEncoding(t *testing.T) {
-
-	var svrCount = 10
-	var reqCount = 100
+	svrCount := 10
+	reqCount := 100
 
 	ts := createServersWithoutChunkedEncoding(t, svrCount)
 	defer func() {
@@ -45,9 +45,8 @@ func TestMultipleTestServersWithoutChunkedEncoding(t *testing.T) {
 }
 
 func TestMultipleTestServersWithChunkedEncoding(t *testing.T) {
-
-	var svrCount = 10
-	var reqCount = 100
+	svrCount := 10
+	reqCount := 100
 
 	ts := createServersWithChunkedEncoding(t, svrCount)
 	defer func() {
@@ -72,7 +71,6 @@ func TestMultipleTestServersWithChunkedEncoding(t *testing.T) {
 }
 
 func TestMultipleSessions(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 
 	ncs := newNCClientSession(t, ts)
@@ -90,18 +88,14 @@ func TestMultipleSessions(t *testing.T) {
 	reply, err = ncs.Execute(Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
-
 }
 
 func exSession(t *testing.T, s Session, wg *sync.WaitGroup, reqCount int) {
 	defer wg.Done()
 	defer s.Close()
 	for e := 0; e < reqCount; e++ {
-
 		reply, _ := s.Execute(Request(req))
-
 		assert.NotNil(t, reply, "Execute failed unexpectedly")
-
 	}
 }
 
@@ -140,6 +134,6 @@ func sshConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 }

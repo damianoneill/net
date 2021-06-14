@@ -21,7 +21,6 @@ type encoder struct {
 }
 
 func (e *encoder) encode(msg interface{}) error {
-
 	err := e.xmlEncoder.Encode(msg)
 	if err != nil {
 		return err

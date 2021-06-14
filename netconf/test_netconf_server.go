@@ -33,7 +33,6 @@ type TestNCServer struct {
 // The behaviour of the Netconf session handler can be conifgured using the WithCapabilities and
 // WithRequestHandler methods.
 func NewTestNetconfServer(tctx assert.TestingT) *TestNCServer {
-
 	ncs := &TestNCServer{sessionHandlers: make(map[uint64]*SessionHandler), caps: DefaultCapabilities}
 
 	if tctx == nil {
@@ -79,7 +78,7 @@ func (ncs *TestNCServer) WithCapabilities(caps []string) *TestNCServer {
 func (ncs *TestNCServer) Close() {
 	for k, v := range ncs.sessionHandlers {
 		if v.ch != nil {
-			v.Close() // nolint: gosec, errcheck
+			v.Close() //nolint:errcheck
 			ncs.sessionHandlers[k] = nil
 		}
 	}

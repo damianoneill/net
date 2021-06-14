@@ -93,7 +93,7 @@ func (d *Decoder) Read(b []byte) (n int, err error) {
 		d.pipedCount = len(token)
 		go func() {
 			if _, err = d.pw.Write(token); err != nil {
-				d.pr.CloseWithError(err) // nolint : gosec
+				d.pr.CloseWithError(err) //nolint:gosec
 			}
 		}()
 		n, err = d.pr.Read(b)
@@ -117,7 +117,6 @@ func (d *Decoder) split(b []byte, eof bool) (a int, t []byte, err error) {
 }
 
 func (d *Decoder) setFramer(f FramerFn) {
-
 	// If we have not yet seen an End of Message, set the new framer as pending, so that it only
 	// takes effect after End of Message is detected.
 	// This allows for the sequence:

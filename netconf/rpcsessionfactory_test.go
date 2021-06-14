@@ -15,21 +15,19 @@ import (
 )
 
 func TestTransportFailure(t *testing.T) {
-
 	s, err := NewRPCSession(context.Background(), &ssh.ClientConfig{}, "localhost:0")
 	assert.Error(t, err, "Expecting new session to fail")
 	assert.Nil(t, s, "Session should be nil")
 }
 
 func TestSessionSetupFailure(t *testing.T) {
-
 	ts := testutil.NewSSHServer(t, TestUserName, TestPassword)
 	defer ts.Close()
 
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
@@ -39,22 +37,23 @@ func TestSessionSetupFailure(t *testing.T) {
 }
 
 func TestSessionSetupSuccess(t *testing.T) {
-
 	ts := NewTestNetconfServer(t)
 
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
-	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &ClientConfig{setupTimeoutSecs: 1})
+	s, err := NewRPCSessionWithConfig(context.Background(),
+		sshConfig,
+		fmt.Sprintf("localhost:%d", ts.Port()),
+		&ClientConfig{setupTimeoutSecs: 1})
 	assert.NoError(t, err, "Expecting new session to succeed")
 	assert.NotNil(t, s, "Session should not be nil")
 }
 
 func TestSessionWithHooks(t *testing.T) {
-
 	logged := exerciseSession(t, NoOpLoggingHooks)
 	assert.Equal(t, "", logged, "Nothing should be logged")
 
@@ -71,16 +70,16 @@ func TestSessionWithHooks(t *testing.T) {
 }
 
 func exerciseSession(t *testing.T, hooks *ClientTrace) string {
-
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
 	log.SetOutput(w)
 
+	//nolint:lll
 	ts := NewTestNetconfServer(t).WithRequestHandler(EchoRequestHandler).WithRequestHandler(EchoRequestHandler).WithRequestHandler(EchoRequestHandler).WithRequestHandler(CloseRequestHandler)
 	sshConfig := &ssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint:gosec
 	}
 
 	ctx := context.Background()

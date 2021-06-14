@@ -35,8 +35,10 @@ func (cb *callback) HandleRequest(req *RpcRequestMessage) *RpcReplyMessage {
 	data := ReplyData{Data: responseFor(req)}
 
 	errors := []common.RPCError{}
-	return &RpcReplyMessage{Data: data, MessageID: req.MessageID,
-		Errors: errors}
+	return &RpcReplyMessage{
+		Data: data, MessageID: req.MessageID,
+		Errors: errors,
+	}
 }
 
 func responseFor(req *RpcRequestMessage) string {
@@ -45,7 +47,7 @@ func responseFor(req *RpcRequestMessage) string {
 		return `<top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>`
 	case "get-config":
 		return `<top><sub attr="cfgval1"><child1>cfgval2</child1></sub></top>`
-	//case "edit-config":
+	// case "edit-config":
 	//	etc...
 	default:
 		return req.Request.Body
@@ -53,7 +55,6 @@ func responseFor(req *RpcRequestMessage) string {
 }
 
 func TestServer(t *testing.T) {
-
 	sshcfg, err := ssh.PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 

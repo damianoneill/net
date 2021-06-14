@@ -22,9 +22,8 @@ const req = `<get>
 </get>`
 
 func TestMultipleTestServersWithoutChunkedEncoding(t *testing.T) {
-
-	var svrCount = 10
-	var reqCount = 100
+	svrCount := 10
+	reqCount := 100
 
 	ts := createServersWithoutChunkedEncoding(t, svrCount)
 	defer func() {
@@ -49,9 +48,8 @@ func TestMultipleTestServersWithoutChunkedEncoding(t *testing.T) {
 }
 
 func TestMultipleTestServersWithChunkedEncoding(t *testing.T) {
-
-	var svrCount = 10
-	var reqCount = 100
+	svrCount := 10
+	reqCount := 100
 
 	ts := createServersWithChunkedEncoding(t, svrCount)
 	defer func() {
@@ -76,7 +74,6 @@ func TestMultipleTestServersWithChunkedEncoding(t *testing.T) {
 }
 
 func TestMultipleSessions(t *testing.T) {
-
 	ts := testserver.NewTestNetconfServer(t)
 
 	ncs := newNCClientSession(t, ts)
@@ -94,7 +91,6 @@ func TestMultipleSessions(t *testing.T) {
 	reply, err = ncs.Execute(common.Request(`<get><response/></get>`))
 	assert.NoError(t, err, "Not expecting exec to fail")
 	assert.NotNil(t, reply, "Reply should be non-nil")
-
 }
 
 func exSession(t *testing.T, s client.Session, wg *sync.WaitGroup, reqCount int) {
