@@ -23,7 +23,7 @@ func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, targ
 	}
 
 	if s, err = NewSession(ctx, t, cfg); err != nil {
-		t.Close() //nolint:errcheck
+		_ = t.Close()
 	}
 	return
 }

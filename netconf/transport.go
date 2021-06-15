@@ -29,7 +29,6 @@ type tImpl struct {
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
 // and requesting the specified subsystem.
-// nolint : gosec
 func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
 	impl := tImpl{target: target}
 	impl.trace = ContextClientTrace(ctx)
@@ -41,13 +40,12 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 	}(time.Now())
 
 	defer func() {
-		//nolint:errcheck
 		if err != nil {
 			if impl.sshClient != nil {
-				impl.sshClient.Close()
+				_ = impl.sshClient.Close()
 			}
 			if impl.sshSession != nil {
-				impl.sshSession.Close()
+				_ = impl.sshSession.Close()
 			}
 		}
 	}()
@@ -77,7 +75,7 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 	impl.injectTraceWriter()
 
 	rt = &impl
-	return
+	return rt, err
 }
 
 func (t *tImpl) Read(p []byte) (n int, err error) {

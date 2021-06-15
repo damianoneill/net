@@ -35,13 +35,34 @@ func NewSSHServer(t assert.TestingT, uname, password string) *SSHServer {
 
 // NewSSHServerHandler deflivers a new test SSH Server, with a custom channel handler.
 // The server implements password authentication with the given credentials.
-func NewSSHServerHandler(t assert.TestingT, uname, password string, factory HandlerFactory) *SSHServer {
+func NewSSHServerHandler(t assert.TestingT, uname, password string, factory HandlerFactory, opts ...ServerOption) *SSHServer {
+	serverOptions := &serverOptions{requestTypes: []string{"subsystem"}}
+	for _, opt := range opts {
+		opt(serverOptions)
+	}
+
 	listener, err := net.Listen("tcp", "localhost:0")
 	assert.NoError(t, err, "Listen failed")
 
-	go acceptConnections(t, listener, newSSHServerConfig(t, uname, password), factory)
+	go acceptConnections(t, listener, newSSHServerConfig(t, uname, password), factory, serverOptions)
 
 	return &SSHServer{listener: listener}
+}
+
+// ServerOption implements options for configuring test server behaviour.
+type ServerOption func(*serverOptions)
+
+// serverOptions defines properties controlling test server behaviour.
+type serverOptions struct {
+	requestTypes []string
+}
+
+// RequestTypes defines the request types that will be 'accepted' - i.e. the request response will be 'ok' (true).
+// Defaults to {"subsystem"}
+func RequestTypes(types []string) ServerOption {
+	return func(c *serverOptions) {
+		c.requestTypes = types
+	}
 }
 
 // Port delivers the tcp port number on which the server is listening.
@@ -54,7 +75,7 @@ func (ts *SSHServer) Close() {
 	_ = ts.listener.Close()
 }
 
-func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, factory HandlerFactory) {
+func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, factory HandlerFactory, options *serverOptions) {
 	for {
 		nConn, err := listener.Accept()
 		if err != nil {
@@ -73,10 +94,18 @@ func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.Ser
 			dataChan, requests, err := newChannel.Accept()
 			assert.NoError(t, err, "Failed to accept new channel")
 
-			// Handle the "subsystem" request.
+			// Handle requests - subsystem, pty-req, shell etc.
 			go func(in <-chan *ssh.Request) {
 				for req := range in {
-					assert.NoError(t, req.Reply(req.Type == "subsystem", nil), "Request reply failed")
+					typeOk := false
+					for _, ty := range options.requestTypes {
+						if req.Type == ty {
+							typeOk = true
+							break
+						}
+					}
+
+					_ = req.Reply(typeOk, nil)
 				}
 			}(requests)
 
