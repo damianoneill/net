@@ -206,7 +206,7 @@ func messageWithType(mType byte) []byte {
 	trap := []byte{
 		// Message Type = Sequence, Length = 82
 		0x30, 0x52,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -256,6 +256,7 @@ func (h *handler) NewMessage(pdu *PDU, isInform bool, addr net.Addr) {
 	h.wg.Done()
 }
 
+//nolint: gocritic
 // Tests against real SNMP agent. Useful for diagnostics.
 //
 //

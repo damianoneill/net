@@ -32,7 +32,7 @@ type SessionCallback interface {
 	// If the callback returns nil, the default set of capabilities is used.
 	Capabilities() []string
 	// HandleRequest is called to handle an RPC request.
-	HandleRequest(req *RpcRequestMessage) *RpcReplyMessage
+	HandleRequest(req *RPCRequestMessage) *RPCReplyMessage
 }
 
 type SessionFactory func(*SessionHandler) SessionCallback
@@ -71,9 +71,9 @@ type SessionHandler struct {
 	cb SessionCallback
 }
 
-// RpcRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
+// RPCRequestMessage and rpcRequest represent an RPC request from a client, where the element type of the
 // request body is unknown.
-type RpcRequestMessage struct {
+type RPCRequestMessage struct {
 	XMLName   xml.Name
 	MessageID string     `xml:"message-id,attr"`
 	Request   RPCRequest `xml:",any"`
@@ -86,10 +86,10 @@ type RPCRequest struct {
 	Body    string `xml:",innerxml"`
 }
 
-// RpcReplyMessage  and ReplyData represent an rpc-reply message that will be sent to a client session, where the
+// RPCReplyMessage  and ReplyData represent an rpc-reply message that will be sent to a client session, where the
 // element type of the reply body (i.e. the content of the data element)
 // is unknown.
-type RpcReplyMessage struct {
+type RPCReplyMessage struct {
 	XMLName   xml.Name          `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc-reply"`
 	Errors    []common.RPCError `xml:"rpc-error,omitempty"`
 	Data      ReplyData         `xml:"data"`
@@ -105,14 +105,14 @@ type ReplyData struct {
 
 // RequestHandler is a function type that will be invoked by the session handler to handle an RPC
 // request.
-type RequestHandler func(h *SessionHandler, req *RpcRequestMessage)
+type RequestHandler func(h *SessionHandler, req *RPCRequestMessage)
 
 // NewServer creates a new Server that will accept Netconf localhost connections on an ephemeral port (available
 // via Port()), with credentials defined by the sshcfg configuration.
 func NewServer(ctx context.Context, address string, port int, sshcfg *xssh.ServerConfig, sf SessionFactory) (ncs *Server, err error) {
 	trace := ContextNetconfTrace(ctx)
-	if trace.Trace != nil && ssh.ContextSshTrace(ctx) == nil {
-		ctx = ssh.WithSshTrace(ctx, trace.Trace)
+	if trace.Trace != nil && ssh.ContextSSHTrace(ctx) == nil {
+		ctx = ssh.WithSSHTrace(ctx, trace.Trace)
 	}
 
 	ncs = &Server{sessionHandlers: make(map[uint64]*SessionHandler), sf: sf, trace: trace}
@@ -137,14 +137,14 @@ func (ncs *Server) handlerFactory() ssh.HandlerFactory {
 func (ncs *Server) Close() {
 	for k, v := range ncs.sessionHandlers {
 		if v.ch != nil {
-			v.Close() // nolint: gosec, errcheck
+			v.Close()
 			ncs.sessionHandlers[k] = nil
 		}
 	}
 	ncs.Server.Close()
 }
 
-func (ncs *Server) newSessionHandler(svrcon *xssh.ServerConn, sid uint64) *SessionHandler { // nolint: deadcode
+func (ncs *Server) newSessionHandler(svrcon *xssh.ServerConn, sid uint64) *SessionHandler {
 	sh := &SessionHandler{
 		server:       ncs,
 		svrcon:       svrcon,
@@ -175,7 +175,6 @@ func (h *SessionHandler) Handle(ch xssh.Channel) {
 	// Send server hello to client.
 	err := h.encode(&common.HelloMessage{Capabilities: h.capabilities, SessionID: h.sid})
 	if err == nil {
-
 		go h.handleIncomingMessages(wg)
 		ok := h.waitForClientHello()
 		if ok {
@@ -188,14 +187,14 @@ func (h *SessionHandler) Handle(ch xssh.Channel) {
 
 // Close initiates session tear-down by closing the underlying transport channel.
 func (h *SessionHandler) Close() {
-	_ = h.ch.Close() // nolint: errcheck, gosec
+	_ = h.ch.Close()
 }
 
 func (h *SessionHandler) waitForClientHello() bool {
 	// Wait for the input handler to send the client hello.
 	select {
 	case <-h.hellochan:
-	case <-time.After(time.Duration(5) * time.Second):
+	case <-time.After(time.Second * 5): //nolint: gomnd
 	}
 
 	h.server.trace.ClientHello(h)
@@ -216,14 +215,13 @@ func (h *SessionHandler) handleIncomingMessages(wg *sync.WaitGroup) {
 }
 
 func (h *SessionHandler) handleToken(token xml.Token) {
-	switch token := token.(type) {
-	case xml.StartElement:
-		switch token.Name.Local {
+	if se, ok := token.(xml.StartElement); ok {
+		switch se.Name.Local {
 		case common.NameHello.Local: // <hello>
-			h.handleHello(token)
+			h.handleHello(se)
 
 		case common.NameRPC.Local: // <rpc>
-			h.handleRPC(token)
+			h.handleRPC(se)
 		}
 	}
 }
@@ -243,7 +241,7 @@ func (h *SessionHandler) handleHello(token xml.StartElement) {
 }
 
 func (h *SessionHandler) handleRPC(token xml.StartElement) {
-	request := &RpcRequestMessage{}
+	request := &RPCRequestMessage{}
 	err := h.decodeElement(&request, &token)
 	if err != nil {
 		return

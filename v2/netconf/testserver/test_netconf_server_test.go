@@ -1,3 +1,4 @@
+//nolint:dupl
 package testserver_test
 
 import (
@@ -97,11 +98,8 @@ func exSession(t *testing.T, s client.Session, wg *sync.WaitGroup, reqCount int)
 	defer wg.Done()
 	defer s.Close()
 	for e := 0; e < reqCount; e++ {
-
 		reply, _ := s.Execute(common.Request(req))
-
 		assert.NotNil(t, reply, "Execute failed unexpectedly")
-
 	}
 }
 
@@ -140,7 +138,7 @@ func sshConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 }
 
@@ -149,7 +147,7 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) client.S
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 	s, err := client.NewRPCSession(context.Background(), sshConfig, serverAddress)
 	assert.NoError(t, err, "Failed to create session")

@@ -21,7 +21,7 @@ func ContextClientTrace(ctx context.Context) *ClientTrace {
 	if trace == nil {
 		trace = NoOpLoggingHooks
 	} else {
-		_ = mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+		_ = mergo.Merge(trace, NoOpLoggingHooks)
 	}
 	return trace
 }
@@ -30,14 +30,12 @@ func ContextClientTrace(ctx context.Context) *ClientTrace {
 // ctx. Netconf client requests made with the returned context will use
 // the provided trace hooks
 func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
-	// old := ContextClientTrace(ctx)
-	// trace.compose(old)
-
 	ctx = context.WithValue(ctx, clientEventContextKey{}, trace)
 	return ctx
 }
 
 // ClientTrace defines a structure for handling trace events
+//nolint: golint
 type ClientTrace struct {
 	// ConnectStart is called when starting to connect to a remote server.
 	ConnectStart func(clientConfig *ssh.ClientConfig, target string)

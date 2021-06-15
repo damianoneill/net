@@ -17,7 +17,7 @@ func TestEOMEncoding(t *testing.T) {
 		{"TerminatedMessage", []string{"ABC", "XYZ"}, true, "ABCXYZ" + EOM},
 		{"EmptyMessage", []string{""}, false, ""},
 	}
-
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := bytes.NewBuffer([]byte{})
@@ -52,7 +52,7 @@ func TestChunkedEncoding(t *testing.T) {
 		{"SimpleTerminatedMessage", 0, []string{"ABC"}, true, "\n#3\n" + "ABC" + "\n##\n"},
 		{"ChunkedMessage", 5, []string{"ABCDEFGH"}, true, "\n#5\n" + "ABCDE" + "\n#3\n" + "FGH" + "\n##\n"},
 	}
-
+	//nolint: scopelint
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := bytes.NewBuffer([]byte{})

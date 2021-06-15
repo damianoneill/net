@@ -1,3 +1,4 @@
+//nolint: gocritic,gosec
 package ops
 
 import (

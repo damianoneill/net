@@ -32,8 +32,7 @@ func checkCredentials(uname, password string, c ssh.ConnMetadata, pass []byte) (
 	return nil, fmt.Errorf("password rejected for %q", c.User())
 }
 
-func generateHostKey() (hostkey ssh.Signer, err error) { // nolint: interfacerex
-
+func generateHostKey() (hostkey ssh.Signer, err error) {
 	reader := rand.Reader
 	bitSize := 2048
 	var key *rsa.PrivateKey

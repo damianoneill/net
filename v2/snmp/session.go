@@ -85,7 +85,7 @@ type rawVarbind struct {
 // Note the pdu is initially unmarshalled as a raw value, so that the SNMP message type can be replaced by
 // the ASN1 sequence tag before the variable bindings it contains are unmarshalled.
 type packet struct {
-	Version   SNMPVersion
+	Version   Version
 	Community []byte
 	RawPdu    asn1.RawValue
 }
@@ -137,9 +137,9 @@ func (m *sessionImpl) executeGet(ctx context.Context, getType messageType, oids 
 
 	// Keep trying until we succeed, a non-timeout error occurs or the retry limit is reached.
 	for i := 0; ; i++ {
-		ctx, cancel := context.WithTimeout(ctx, m.config.timeout)
+		cctx, cancel := context.WithTimeout(ctx, m.config.timeout)
 		defer cancel()
-		deadline, _ := ctx.Deadline()
+		deadline, _ := cctx.Deadline()
 		err := m.conn.SetDeadline(deadline)
 		if err != nil {
 			return nil, err
@@ -215,7 +215,7 @@ func (m *sessionImpl) readResponse() (input []byte, err error) {
 		m.config.trace.ReadDone(m.config, input[0:n], err, time.Since(begin))
 	}(time.Now())
 
-	n, err = m.conn.Read(input[:])
+	n, err = m.conn.Read(input)
 	if err != nil {
 		return nil, err
 	}

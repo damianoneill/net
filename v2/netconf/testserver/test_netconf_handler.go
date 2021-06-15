@@ -1,3 +1,4 @@
+//nolint:gomnd
 package testserver
 
 import (
@@ -118,7 +119,7 @@ var FailingRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
 
 // CloseRequestHandler closes the transport channel on request receipt.
 var CloseRequestHandler = func(h *SessionHandler, req *rpcRequestMessage) {
-	_ = h.ch.Close() // nolint: errcheck, gosec
+	_ = h.ch.Close()
 }
 
 // IgnoreRequestHandler does in nothing on receipt of a request.
@@ -153,7 +154,7 @@ func responseFor(req *rpcRequestMessage) string {
 	}
 }
 
-func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler { // nolint: deadcode
+func newSessionHandler(t assert.TestingT, sid uint64) *SessionHandler {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	return &SessionHandler{
@@ -204,7 +205,7 @@ func (h *SessionHandler) SendNotification(body string) *SessionHandler {
 
 // Close initiates session tear-down by closing the underlying transport channel.
 func (h *SessionHandler) Close() {
-	_ = h.ch.Close() // nolint: errcheck, gosec
+	_ = h.ch.Close()
 }
 
 func (h *SessionHandler) waitForClientHello() {

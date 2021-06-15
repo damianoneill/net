@@ -58,7 +58,7 @@ type NetconfState struct {
 		DroppedSessions  string `xml:"dropped-sessions"`
 		InRpcs           string `xml:"in-rpcs"`
 		InBadRpcs        string `xml:"in-bad-rpcs"`
-		OutRpcErrors     string `xml:"out-rpc-errors"`
+		OutRPCErrors     string `xml:"out-rpc-errors"`
 		OutNotifications string `xml:"out-notifications"`
 	} `xml:"statistics"`
 	Sessions struct {
@@ -72,7 +72,7 @@ type NetconfState struct {
 			LoginTime        string `xml:"login-time"`
 			InRpcs           string `xml:"in-rpcs"`
 			InBadRpcs        string `xml:"in-bad-rpcs"`
-			OutRpcErrors     string `xml:"out-rpc-errors"`
+			OutRPCErrors     string `xml:"out-rpc-errors"`
 			OutNotifications string `xml:"out-notifications"`
 		} `xml:"session"`
 	} `xml:"sessions"`

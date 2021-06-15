@@ -1,3 +1,4 @@
+//nolint: dupl,gosec
 package ssh
 
 import (
@@ -36,7 +37,7 @@ func TestServer(t *testing.T) {
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
-	ctx := WithSshTrace(context.Background(), DefaultLoggingHooks)
+	ctx := WithSSHTrace(context.Background(), DefaultLoggingHooks)
 	server, err := NewServer(ctx, "localhost", 0, sshcfg, handlerFactory())
 	assert.NotNil(t, server)
 	assert.NoError(t, err)
@@ -65,7 +66,7 @@ func TestServerListenFailure(t *testing.T) {
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
-	ctx := WithSshTrace(context.Background(), DefaultLoggingHooks)
+	ctx := WithSSHTrace(context.Background(), DefaultLoggingHooks)
 	server, err := NewServer(ctx, "9.9.9.9", 9999, sshcfg, handlerFactory())
 	assert.Nil(t, server)
 	assert.Error(t, err)
@@ -76,7 +77,7 @@ func TestServerConnectionFailure(t *testing.T) {
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
-	ctx := WithSshTrace(context.Background(), DefaultLoggingHooks)
+	ctx := WithSSHTrace(context.Background(), DefaultLoggingHooks)
 	server, err := NewServer(ctx, "localhost", 0, sshcfg, handlerFactory())
 	assert.NotNil(t, server)
 	assert.NoError(t, err)
@@ -100,7 +101,7 @@ func TestServerDiagnosticTraceHooks(t *testing.T) {
 	sshcfg, err := PasswordConfig(TestUserName, TestPassword)
 	assert.NoError(t, err)
 
-	ctx := WithSshTrace(context.Background(), DiagnosticLoggingHooks)
+	ctx := WithSSHTrace(context.Background(), DiagnosticLoggingHooks)
 	server, err := NewServer(ctx, "localhost", 0, sshcfg, handlerFactory())
 	assert.NotNil(t, server)
 	assert.NoError(t, err)

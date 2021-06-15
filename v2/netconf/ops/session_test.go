@@ -15,7 +15,8 @@ import (
 func TestGetSubtreeToString(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
 	defer ncs.Close()
-	mcli.On("Execute", createGetSubtreeRequest(`<subtree-element/>`)).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetSubtreeRequest(`<subtree-element/>`)).
+		Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 	mcli.On("Close")
 
 	var result string
@@ -26,7 +27,8 @@ func TestGetSubtreeToString(t *testing.T) {
 
 func TestGetSubtreeToStruct(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetSubtreeRequest(`<subtree-element/>`)).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetSubtreeRequest(`<subtree-element/>`)).
+		Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	result := &Element{}
 	err := ncs.GetSubtree(`<subtree-element/>`, result)
@@ -45,7 +47,8 @@ func TestGetSubtreeExecuteError(t *testing.T) {
 
 func TestGetXpathToString(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetXpathRequest(`/tns:element`, []Namespace{{"tns", "urn:tns"}})).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetXpathRequest(`/tns:element`, []Namespace{{"tns", "urn:tns"}})).
+		Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	var result string
 	err := ncs.GetXpath(`/tns:element`, []Namespace{{"tns", "urn:tns"}}, &result)
@@ -55,7 +58,8 @@ func TestGetXpathToString(t *testing.T) {
 
 func TestGetXpathToStruct(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetXpathRequest(`/tns:element`, []Namespace{{"tns", "urn:tns"}})).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetXpathRequest(`/tns:element`, []Namespace{{"tns", "urn:tns"}})).
+		Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	result := &Element{}
 	err := ncs.GetXpath(`/tns:element`, []Namespace{{"tns", "urn:tns"}}, result)
@@ -74,7 +78,8 @@ func TestGetXpathExecuteError(t *testing.T) {
 
 func TestGetConfigSubtreeToString(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetConfigSubtreeRequest(`<subtree-element/>`, RunningCfg)).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetConfigSubtreeRequest(`<subtree-element/>`, RunningCfg)).
+		Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	var result string
 	err := ncs.GetConfigSubtree(`<subtree-element/>`, RunningCfg, &result)
@@ -84,7 +89,8 @@ func TestGetConfigSubtreeToString(t *testing.T) {
 
 func TestGetConfigSubtreeToStruct(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetConfigSubtreeRequest(`<subtree-element/>`, RunningCfg)).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetConfigSubtreeRequest(`<subtree-element/>`, RunningCfg)).
+		Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	result := &Element{}
 	err := ncs.GetConfigSubtree(`<subtree-element/>`, RunningCfg, result)
@@ -103,7 +109,10 @@ func TestGetConfigSubtreeExecuteError(t *testing.T) {
 
 func TestGetConfigXpathToString(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetConfigXpathRequest(`/tns:element`, RunningCfg, []Namespace{{"tns", "urn:tns"}})).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetConfigXpathRequest(`/tns:element`, RunningCfg, []Namespace{{
+		"tns",
+		"urn:tns",
+	}})).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	var result string
 	err := ncs.GetConfigXpath(`/tns:element`, []Namespace{{"tns", "urn:tns"}}, RunningCfg, &result)
@@ -113,7 +122,10 @@ func TestGetConfigXpathToString(t *testing.T) {
 
 func TestGetConfigXpathToStruct(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetConfigXpathRequest(`/tns:element`, RunningCfg, []Namespace{{"tns", "urn:tns"}})).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
+	mcli.On("Execute", createGetConfigXpathRequest(`/tns:element`, RunningCfg, []Namespace{{
+		"tns",
+		"urn:tns",
+	}})).Return(&common.RPCReply{Data: `<data><element attr1="ABC"/></data>`}, nil)
 
 	result := &Element{}
 	err := ncs.GetConfigXpath(`/tns:element`, []Namespace{{"tns", "urn:tns"}}, RunningCfg, result)
@@ -123,7 +135,10 @@ func TestGetConfigXpathToStruct(t *testing.T) {
 
 func TestGetConfigXpathExecuteError(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createGetConfigXpathRequest(`/tns:element`, RunningCfg, []Namespace{{"tns", "urn:tns"}})).Return(nil, errors.New("failed"))
+	mcli.On("Execute", createGetConfigXpathRequest(`/tns:element`, RunningCfg, []Namespace{{
+		"tns",
+		"urn:tns",
+	}})).Return(nil, errors.New("failed"))
 
 	var result string
 	err := ncs.GetConfigXpath(`/tns:element`, []Namespace{{"tns", "urn:tns"}}, RunningCfg, &result)
@@ -156,9 +171,9 @@ func TestEditConfigStruct(t *testing.T) {
 
 func TestEditConfigUrl(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createEditConfigRequest(CandidateCfg, CfgUrl("file://checkpoint.conf"))).Return(&common.RPCReply{}, nil)
+	mcli.On("Execute", createEditConfigRequest(CandidateCfg, CfgURL("file://checkpoint.conf"))).Return(&common.RPCReply{}, nil)
 
-	err := ncs.EditConfig(CandidateCfg, CfgUrl("file://checkpoint.conf"))
+	err := ncs.EditConfig(CandidateCfg, CfgURL("file://checkpoint.conf"))
 	assert.NoError(t, err, "Not expecting call to fail")
 
 	mcli.AssertExpectations(t)
@@ -167,9 +182,11 @@ func TestEditConfigUrl(t *testing.T) {
 func TestEditConfigOptions(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
 	mcli.On("Execute",
-		createEditConfigRequest(CandidateCfg, Cfg(`<configuration/>`), ErrorOption(StopOnErrorErrOpt), DefaultOperation(NoneOp), TestOption(TestThenSetOpt))).Return(&common.RPCReply{}, nil)
+		createEditConfigRequest(CandidateCfg, Cfg(`<configuration/>`), ErrorOption(StopOnErrorErrOpt),
+			DefaultOperation(NoneOp), TestOption(TestThenSetOpt))).Return(&common.RPCReply{}, nil)
 
-	err := ncs.EditConfig(CandidateCfg, Cfg(`<configuration/>`), ErrorOption(StopOnErrorErrOpt), DefaultOperation(NoneOp), TestOption(TestThenSetOpt))
+	err := ncs.EditConfig(CandidateCfg, Cfg(`<configuration/>`), ErrorOption(StopOnErrorErrOpt),
+		DefaultOperation(NoneOp), TestOption(TestThenSetOpt))
 	assert.NoError(t, err, "Not expecting call to fail")
 
 	mcli.AssertExpectations(t)
@@ -187,9 +204,9 @@ func TestEditConfigCfg(t *testing.T) {
 
 func TestCopyConfig(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createCopyConfigRequest(DsName(CandidateCfg), DsUrl("file://checkpoint.conf"))).Return(&common.RPCReply{}, nil)
+	mcli.On("Execute", createCopyConfigRequest(DsName(CandidateCfg), DsURL("file://checkpoint.conf"))).Return(&common.RPCReply{}, nil)
 
-	err := ncs.CopyConfig(DsName(CandidateCfg), DsUrl("file://checkpoint.conf"))
+	err := ncs.CopyConfig(DsName(CandidateCfg), DsURL("file://checkpoint.conf"))
 	assert.NoError(t, err, "Not expecting call to fail")
 
 	mcli.AssertExpectations(t)
@@ -197,9 +214,9 @@ func TestCopyConfig(t *testing.T) {
 
 func TestDeleteConfig(t *testing.T) {
 	ncs, mcli := newOpsSessionWithMockClient(t)
-	mcli.On("Execute", createDeleteConfigRequest(DsUrl("file://checkpoint.conf"))).Return(&common.RPCReply{}, nil)
+	mcli.On("Execute", createDeleteConfigRequest(DsURL("file://checkpoint.conf"))).Return(&common.RPCReply{}, nil)
 
-	err := ncs.DeleteConfig(DsUrl("file://checkpoint.conf"))
+	err := ncs.DeleteConfig(DsURL("file://checkpoint.conf"))
 	assert.NoError(t, err, "Not expecting call to fail")
 
 	mcli.AssertExpectations(t)
@@ -317,7 +334,7 @@ func TestGetSchemaExecuteError(t *testing.T) {
 	assert.Empty(t, reply, "Reply should be empty")
 }
 
-func newOpsSessionWithMockClient(t assert.TestingT) (OpSession, *mocks.OpSession) {
+func newOpsSessionWithMockClient(_ assert.TestingT) (OpSession, *mocks.OpSession) { //nolint: gocritic
 	mockClient := &mocks.OpSession{}
 	return &sImpl{mockClient}, mockClient
 }
@@ -327,6 +344,7 @@ type Element struct {
 	Attr1   string   `xml:"attr1,attr"`
 }
 
+//nolint: lll,gocritic
 // Simple real NE access tests
 //
 //func TestRealGetSubtree(t *testing.T) {
@@ -379,7 +397,7 @@ type Element struct {
 //	ncs := setupServer1(t)
 //	defer ncs.Close()
 //
-//	err := ncs.CopyConfig(DsName(RunningCfg), DsUrl("file://checkpoint.conf"))
+//	err := ncs.CopyConfig(DsName(RunningCfg), DsURL("file://checkpoint.conf"))
 //	assert.Error(t, err, "Expecting exec to fail") // no such file...
 //}
 //

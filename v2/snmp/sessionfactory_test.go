@@ -21,7 +21,7 @@ func TestNewSessionOptions(t *testing.T) {
 		Network("udp"),
 		Timeout(time.Second),
 		Retries(5),
-		Version(SNMPV2C),
+		WithVersion(SNMPV2C),
 		Community("public"),
 		LoggingHooks(DiagnosticLoggingHooks),
 	)

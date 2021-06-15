@@ -51,12 +51,10 @@ func (ts *SSHServer) Port() int {
 
 // Close closes any resources used by the server.
 func (ts *SSHServer) Close() {
-	// nolint: gosec, errcheck
-	ts.listener.Close()
+	_ = ts.listener.Close()
 }
 
 func acceptConnections(t assert.TestingT, listener net.Listener, config *ssh.ServerConfig, factory HandlerFactory) {
-	// nolint: gosec, errcheck
 	for {
 		nConn, err := listener.Accept()
 		if err != nil {
@@ -105,7 +103,6 @@ func newSSHServerConfig(t assert.TestingT, uname, password string) *ssh.ServerCo
 }
 
 func generateHostKey(t assert.TestingT) (hostkey ssh.Signer) { // nolint: interfacer
-
 	reader := rand.Reader
 	bitSize := 2048
 	var err error

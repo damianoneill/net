@@ -29,7 +29,7 @@ func (f *factoryImpl) NewSession(ctx context.Context, target string, opts ...Ses
 		opt(&config)
 	}
 
-	mergo.Merge(config.trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+	_ = mergo.Merge(config.trace, NoOpLoggingHooks)
 
 	conn, err := newConnection(ctx, &config)
 	if err != nil {
@@ -37,7 +37,7 @@ func (f *factoryImpl) NewSession(ctx context.Context, target string, opts ...Ses
 		return nil, err
 	}
 
-	return &sessionImpl{config: &config, conn: conn, nextRequestID: rand.Int31()}, nil
+	return &sessionImpl{config: &config, conn: conn, nextRequestID: rand.Int31()}, nil //nolint: gosec
 }
 
 // SessionOption implements options for configuring session behaviour.
@@ -67,9 +67,9 @@ func Network(value string) SessionOption {
 	}
 }
 
-// Version defines the SNMP version to use.
+// WithVersion defines the SNMP version to use.
 // Default value is SNMPV2C
-func Version(value SNMPVersion) SessionOption {
+func WithVersion(value Version) SessionOption {
 	return func(c *SessionConfig) {
 		c.version = value
 	}
@@ -92,16 +92,16 @@ func LoggingHooks(trace *SessionTrace) SessionOption {
 }
 
 // SNMP Versions.
-type SNMPVersion int
+type Version int
 
 const (
-	SNMPV1  SNMPVersion = 0
-	SNMPV2C SNMPVersion = 1
-	SNMPV3  SNMPVersion = 3
+	SNMPV1  Version = 0
+	SNMPV2C Version = 1
+	SNMPV3  Version = 3
 )
 
 // Deliver a new network connection to the address defined in the configuration.
-func newConnection(ctx context.Context, c *SessionConfig) (conn net.Conn, err error) {
+func newConnection(_ context.Context, c *SessionConfig) (conn net.Conn, err error) {
 	defer func(begin time.Time) {
 		c.trace.ConnectDone(c, err, time.Since(begin))
 	}(time.Now())
@@ -116,7 +116,7 @@ type SessionConfig struct {
 	// Network address/hostname with port, for example: 10.48.24.234:161
 	address string
 	// SNMP version
-	version SNMPVersion
+	version Version
 	// community string for v2c.
 	community string
 	// Timeout for receiving a response

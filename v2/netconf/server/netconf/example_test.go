@@ -1,3 +1,4 @@
+//nolint: goconst,gosec
 package netconf
 
 import (
@@ -17,12 +18,12 @@ func (es *exampleServer) Capabilities() []string {
 	return common.DefaultCapabilities
 }
 
-func (es *exampleServer) HandleRequest(req *RpcRequestMessage) *RpcReplyMessage {
+func (es *exampleServer) HandleRequest(req *RPCRequestMessage) *RPCReplyMessage {
 	switch req.Request.XMLName.Local {
 	case "get":
-		return &RpcReplyMessage{Data: ReplyData{Data: `<top><sub attr="avalue"><child1>cvalue</child1></sub></top>`}, MessageID: req.MessageID}
+		return &RPCReplyMessage{Data: ReplyData{Data: `<top><sub attr="avalue"><child1>cvalue</child1></sub></top>`}, MessageID: req.MessageID}
 	case "get-config":
-		return &RpcReplyMessage{Errors: []common.RPCError{
+		return &RPCReplyMessage{Errors: []common.RPCError{
 			{Severity: "error", Message: "oops"},
 		}, MessageID: req.MessageID}
 	}

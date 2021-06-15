@@ -31,17 +31,17 @@ func (cb *callback) Capabilities() []string {
 	return common.DefaultCapabilities
 }
 
-func (cb *callback) HandleRequest(req *RpcRequestMessage) *RpcReplyMessage {
+func (cb *callback) HandleRequest(req *RPCRequestMessage) *RPCReplyMessage {
 	data := ReplyData{Data: responseFor(req)}
 
 	errors := []common.RPCError{}
-	return &RpcReplyMessage{
+	return &RPCReplyMessage{
 		Data: data, MessageID: req.MessageID,
 		Errors: errors,
 	}
 }
 
-func responseFor(req *RpcRequestMessage) string {
+func responseFor(req *RPCRequestMessage) string {
 	switch req.Request.XMLName.Local {
 	case "get":
 		return `<top><sub attr="avalue"><child1>cvalue</child1><child2/></sub></top>`
@@ -59,7 +59,7 @@ func TestServer(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := WithTrace(context.Background(), DiagnosticLoggingHooks)
-	ctx = ssh.WithSshTrace(ctx, ssh.DiagnosticLoggingHooks)
+	ctx = ssh.WithSSHTrace(ctx, ssh.DiagnosticLoggingHooks)
 	server, err := NewServer(ctx, "localhost", 0, sshcfg, sessionFactory)
 	assert.NotNil(t, server)
 	assert.NoError(t, err)
@@ -70,7 +70,7 @@ func TestServer(t *testing.T) {
 	sshConfig := &xssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []xssh.AuthMethod{xssh.Password(TestPassword)},
-		HostKeyCallback: xssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: xssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
 	ncs, err := ops.NewSession(context.Background(), sshConfig, fmt.Sprintf("%s:%d", "localhost", server.Port()))

@@ -59,20 +59,20 @@ type Notification struct {
 
 // NotificationMessage defines the notification message sent from the server.
 type NotificationMessage struct {
-	XMLName   xml.Name     //`xml:"notification"`
+	XMLName   xml.Name     // `xml:"notification"`
 	EventTime string       `xml:"eventTime"`
 	Event     Notification `xml:",any"`
 }
 
 type Union struct {
 	ValueStr interface{}
-	ValueXml string `xml:",innerxml"`
+	ValueXML string `xml:",innerxml"`
 }
 
 func GetUnion(s interface{}) *Union {
 	switch request := s.(type) {
 	case string:
-		return &Union{ValueXml: request}
+		return &Union{ValueXML: request}
 	default:
 		return &Union{ValueStr: request}
 	}

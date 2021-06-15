@@ -186,7 +186,8 @@ func TestSubscribe(t *testing.T) {
 		wg.Done()
 	}()
 
-	reply, _ := ncs.Subscribe(common.Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
+	reply, _ := ncs.Subscribe(common.Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0">`+
+		`</ncEvent:create-subscription>`), nch)
 	assert.NotNil(t, reply, "create-subscription failed")
 	assert.NotNil(t, reply.Data, "create-subscription failed")
 
@@ -292,7 +293,7 @@ func newNCClientSession(t assert.TestingT, ts *testserver.TestNCServer) Session 
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 	s, err := NewRPCSession(context.Background(), sshConfig, serverAddress)
 	assert.NoError(t, err, "Failed to create session")
@@ -304,7 +305,7 @@ func newNCClientSessionWithConfig(t assert.TestingT, ts *testserver.TestNCServer
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, serverAddress, cfg)
 	assert.NoError(t, err, "Failed to create session")
@@ -313,6 +314,7 @@ func newNCClientSessionWithConfig(t assert.TestingT, ts *testserver.TestNCServer
 
 // Simple real NE access tests
 
+//nolint: lll,gocritic
 //func TestRealNewSession(t *testing.T) {
 //
 //	sshConfig := &ssh.ClientConfig{
