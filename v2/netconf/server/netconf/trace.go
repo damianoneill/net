@@ -19,7 +19,7 @@ func ContextNetconfTrace(ctx context.Context) *Trace {
 	if trace == nil {
 		trace = NoOpLoggingHooks
 	} else {
-		_ = mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+		_ = mergo.Merge(trace, NoOpLoggingHooks)
 	}
 	return trace
 }

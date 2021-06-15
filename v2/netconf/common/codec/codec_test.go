@@ -16,7 +16,7 @@ type testStr struct {
 func TestEncoderFailures(t *testing.T) {
 	// Failure on write of message
 	mockt := &mocks.Transport{}
-	mockt.On("Write", mock.Anything).Return(0, errors.New("Failed"))
+	mockt.On("Write", mock.Anything).Return(0, errors.New("failed"))
 	enc := NewEncoder(mockt)
 	err := enc.Encode(&testStr{})
 	assert.Error(t, err, "Expect failure")
@@ -26,7 +26,7 @@ func TestEncoderFailures(t *testing.T) {
 	mockt.On("Write", mock.Anything).Return(func(buf []byte) int {
 		return len(buf)
 	}, nil).Once()
-	mockt.On("Write", mock.Anything).Return(0, errors.New("Failed"))
+	mockt.On("Write", mock.Anything).Return(0, errors.New("failed"))
 	enc = NewEncoder(mockt)
 	err = enc.Encode(&testStr{})
 	assert.Error(t, err, "Expect failure")

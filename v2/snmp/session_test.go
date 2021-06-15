@@ -1,3 +1,4 @@
+//nolint: funlen
 package snmp
 
 import (
@@ -11,6 +12,12 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
+const (
+	private      = "private"
+	public       = "public"
+	localhost161 = "localhost:161"
+)
+
 func TestGet(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -19,7 +26,7 @@ func TestGet(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 38
 		0x30, 0x26,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -44,7 +51,7 @@ func TestGet(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 54
 		0x30, 0x82, 0x00, 0x36,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -78,8 +85,8 @@ func TestGet(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 	defer m.Close()
@@ -101,7 +108,7 @@ func TestGetNext(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 40
 		0x30, 0x28,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -126,7 +133,7 @@ func TestGetNext(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 63
 		0x30, 0x82, 0x00, 0x3f,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -159,8 +166,8 @@ func TestGetNext(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -182,7 +189,7 @@ func TestGetBulk(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 53
 		0x30, 0x35,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -213,7 +220,7 @@ func TestGetBulk(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 149
 		0x30, 0x82, 0x00, 0x95,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -268,8 +275,8 @@ func TestGetBulk(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -298,7 +305,7 @@ func TestWalk(t *testing.T) {
 	getRequest1 := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -323,7 +330,7 @@ func TestWalk(t *testing.T) {
 	getRequest2 := []byte{
 		// Message Type = Sequence, Length = 38
 		0x30, 0x26,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -348,7 +355,7 @@ func TestWalk(t *testing.T) {
 	getResponse1 := []byte{
 		// Message Type = Sequence, Length = 66
 		0x30, 0x82, 0x00, 0x42,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -367,13 +374,14 @@ func TestWalk(t *testing.T) {
 		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.4.0
 		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x04, 0x00,
 		// Value Type = Octet String, Length = 22, Value = support@gambitcomm.com
-		0x04, 0x16, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x40, 0x67, 0x61, 0x6d, 0x62, 0x69, 0x74, 0x63, 0x6f, 0x6d, 0x6d, 0x2e, 0x63, 0x6f, 0x6d,
+		0x04, 0x16, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x40, 0x67, 0x61, 0x6d, 0x62, 0x69, 0x74, 0x63, 0x6f, 0x6d,
+		0x6d, 0x2e, 0x63, 0x6f, 0x6d,
 	}
 
 	getResponse2 := []byte{
 		// Message Type = Sequence, Length = 54
 		0x30, 0x82, 0x00, 0x36,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -413,8 +421,8 @@ func TestWalk(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -440,8 +448,8 @@ func TestNetworkWriteFailure(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -464,8 +472,8 @@ func TestSetDeadlineFailure(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -486,7 +494,7 @@ func TestNetworkReadFailure(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -515,8 +523,8 @@ func TestNetworkReadFailure(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -537,7 +545,7 @@ func TestUnmarshalPacketFailure(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -575,8 +583,8 @@ func TestUnmarshalPacketFailure(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -597,7 +605,7 @@ func TestWalkWalkerFailure(t *testing.T) {
 	getRequest1 := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -622,7 +630,7 @@ func TestWalkWalkerFailure(t *testing.T) {
 	getResponse1 := []byte{
 		// Message Type = Sequence, Length = 66
 		0x30, 0x82, 0x00, 0x42,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -641,7 +649,8 @@ func TestWalkWalkerFailure(t *testing.T) {
 		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.4.0
 		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x04, 0x00,
 		// Value Type = Octet String, Length = 22, Value = support@gambitcomm.com
-		0x04, 0x16, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x40, 0x67, 0x61, 0x6d, 0x62, 0x69, 0x74, 0x63, 0x6f, 0x6d, 0x6d, 0x2e, 0x63, 0x6f, 0x6d,
+		0x04, 0x16, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x40, 0x67, 0x61, 0x6d, 0x62, 0x69, 0x74, 0x63, 0x6f, 0x6d,
+		0x6d, 0x2e, 0x63, 0x6f, 0x6d,
 	}
 
 	gomock.InOrder(
@@ -655,8 +664,8 @@ func TestWalkWalkerFailure(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -675,7 +684,7 @@ func TestBulkWalk(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -700,7 +709,7 @@ func TestBulkWalk(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 92
 		0x30, 0x82, 0x00, 0x5c,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -720,7 +729,8 @@ func TestBulkWalk(t *testing.T) {
 		// Object Identifier Type = Object Identifier, Length = 8, Value = 1.3.6.1.2.1.1.4.0
 		0x06, 0x08, 0x2b, 0x06, 0x01, 0x02, 0x01, 0x01, 0x04, 0x00,
 		// Value Type = Octet String, Length = 22, Value = support@gambitcomm.com
-		0x04, 0x16, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x40, 0x67, 0x61, 0x6d, 0x62, 0x69, 0x74, 0x63, 0x6f, 0x6d, 0x6d, 0x2e, 0x63, 0x6f, 0x6d,
+		0x04, 0x16, 0x73, 0x75, 0x70, 0x70, 0x6f, 0x72, 0x74, 0x40, 0x67, 0x61, 0x6d, 0x62, 0x69, 0x74, 0x63, 0x6f, 0x6d,
+		0x6d, 0x2e, 0x63, 0x6f, 0x6d,
 
 		// Varbind Type = Sequence, Length = 22
 		0x30, 0x82, 0x00, 0x16,
@@ -741,8 +751,8 @@ func TestBulkWalk(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = MetricLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -781,7 +791,7 @@ func TestRetry(t *testing.T) {
 	getRequest1 := []byte{
 		// Message Type = Sequence, Length = 38
 		0x30, 0x26,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -806,7 +816,7 @@ func TestRetry(t *testing.T) {
 	getRequest2 := []byte{
 		// Message Type = Sequence, Length = 38
 		0x30, 0x26,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -831,7 +841,7 @@ func TestRetry(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 54
 		0x30, 0x82, 0x00, 0x36,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 6, Value = public
 		0x04, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
@@ -867,8 +877,8 @@ func TestRetry(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "public"
+	config.address = localhost161
+	config.community = public
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -889,7 +899,7 @@ func TestEndOfMib(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 40
 		0x30, 0x28,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 7, Value = private
 		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
@@ -914,7 +924,7 @@ func TestEndOfMib(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 40
 		0x30, 0x28,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 7, Value = private
 		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
@@ -947,8 +957,8 @@ func TestEndOfMib(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "private"
+	config.address = localhost161
+	config.community = private
 	config.trace = DiagnosticLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -971,7 +981,7 @@ func TestNoSuchObject(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 7, Value = private
 		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
@@ -996,7 +1006,7 @@ func TestNoSuchObject(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 37
 		0x30, 0x25,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 7, Value = private
 		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
@@ -1029,8 +1039,8 @@ func TestNoSuchObject(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "private"
+	config.address = localhost161
+	config.community = private
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -1051,7 +1061,7 @@ func TestNoSuchInstance(t *testing.T) {
 	getRequest := []byte{
 		// Message Type = Sequence, Length = 41
 		0x30, 0x29,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 7, Value = private
 		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
@@ -1076,7 +1086,7 @@ func TestNoSuchInstance(t *testing.T) {
 	getResponse := []byte{
 		// Message Type = Sequence, Length = 41
 		0x30, 0x29,
-		// Version Type = Integer, Length = 1, Value = 1
+		// WithVersion Type = Integer, Length = 1, Value = 1
 		0x02, 0x01, 0x01,
 		// Community String Type = Octet String, Length = 7, Value = private
 		0x04, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
@@ -1109,8 +1119,8 @@ func TestNoSuchInstance(t *testing.T) {
 	)
 
 	config := defaultConfig
-	config.address = "localhost:161"
-	config.community = "private"
+	config.address = localhost161
+	config.community = private
 	config.trace = NoOpLoggingHooks
 	m := &sessionImpl{config: &config, conn: mockConn, nextRequestID: 1}
 
@@ -1123,6 +1133,7 @@ func TestNoSuchInstance(t *testing.T) {
 	assert.Nil(t, tv.Value)
 }
 
+//nolint: gocritic
 // Tests against real SNMP agent. Useful for diagnostics.
 //
 //func TestRealGet(t *testing.T) {

@@ -1,3 +1,4 @@
+//nolint: gosec
 package client
 
 import (
@@ -81,7 +82,8 @@ func ExampleSession_Subscribe() {
 	sh := ts.SessionHandler(s.ID())
 
 	nch := make(chan *common.Notification)
-	_, _ = s.Subscribe(common.Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0"></ncEvent:create-subscription>`), nch)
+	_, _ = s.Subscribe(common.Request(`<ncEvent:create-subscription xmlns:ncEvent="urn:ietf:params:xml:ns:netconf:notification:1.0">`+
+		`</ncEvent:create-subscription>`), nch)
 
 	// Get test server to send a notification in 500ms.
 	time.AfterFunc(time.Millisecond*time.Duration(500), func() {

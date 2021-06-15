@@ -20,7 +20,7 @@ const tagMask = 0x1f
 // SNMP data type tags.
 const (
 	ipTag                = 0x40
-	resolvedIpTag        = ipTag & tagMask
+	resolvedIPTag        = ipTag & tagMask
 	counter32Tag         = 0x41
 	resolvedCounter32Tag = counter32Tag & tagMask
 	gauge32Tag           = 0x42
@@ -48,7 +48,7 @@ const (
 	OctetString
 	OID
 
-	IpAdddress
+	IPAdddress
 	Time
 	Counter32
 	Counter64
@@ -62,6 +62,7 @@ const (
 
 // Unmarshals an asn1 RawValue contqining a single variable to deliver a TypedValue that encapsulates the variable type and
 // the golang representation of the variable value.
+//nolint: gocyclo
 func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
 	switch raw.Class {
 	case asn1.ClassUniversal:
@@ -76,8 +77,8 @@ func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
 
 	case asn1.ClassApplication:
 		switch raw.Tag {
-		case resolvedIpTag:
-			return unmarshalOctetString(raw, IpAdddress)
+		case resolvedIPTag:
+			return unmarshalOctetString(raw, IPAdddress)
 		case resolvedCounter32Tag:
 			return unmarshalInteger(raw, Counter32)
 		case resolvedCounter64Tag:
@@ -117,12 +118,8 @@ func unmarshalInteger(raw *asn1.RawValue, dataType DataType) (*TypedValue, error
 
 // Casts an integer value to the integer type that corresponds to the SNMP data type.
 func integerValue(v int64, dataType DataType) interface{} {
-	switch dataType {
-	case Counter32:
-		fallthrough
-	case Gauge32:
-		fallthrough
-	case Time:
+	switch dataType { //nolint: exhaustive
+	case Counter32, Gauge32, Time:
 		return uint32(v)
 
 	case Counter64:
@@ -171,13 +168,11 @@ func (tv *TypedValue) String() string {
 	case Time:
 		t := int64(tv.Value.(uint32)) * 10000
 		return time.Duration(t).String()
-	case Counter32:
-		fallthrough
-	case Gauge32:
+	case Counter32, Gauge32:
 		return strconv.FormatInt(int64(tv.Value.(uint32)), 10)
 	case Counter64:
 		return strconv.FormatInt(int64(tv.Value.(uint64)), 10)
-	case IpAdddress:
+	case IPAdddress:
 		address := tv.Value.([]uint8)
 		str := make([]string, len(address))
 		for x, octet := range address {
@@ -206,16 +201,12 @@ func (tv *TypedValue) OID() asn1.ObjectIdentifier {
 // Delivers value of a typed value as an int.
 // Value type must be integer-based.
 func (tv *TypedValue) Int() int {
-	switch tv.Type {
+	switch tv.Type { //nolint: exhaustive
 	case Integer:
 		return int(tv.Value.(int64))
 	case Counter64:
 		return int(tv.Value.(uint64))
-	case Counter32:
-		fallthrough
-	case Gauge32:
-		fallthrough
-	case Time:
+	case Counter32, Gauge32, Time:
 		return int(tv.Value.(uint32))
 	}
 	panic(fmt.Errorf("non-integer data type %d", tv.Type))

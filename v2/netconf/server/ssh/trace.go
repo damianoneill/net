@@ -11,22 +11,22 @@ import (
 // unique type to prevent assignment.
 type sshEventContextKey struct{}
 
-// ContextSshTrace returns the Trace associated with the
+// ContextSSHTrace returns the Trace associated with the
 // provided context. If none, it returns nil.
-func ContextSshTrace(ctx context.Context) *Trace {
+func ContextSSHTrace(ctx context.Context) *Trace {
 	trace, _ := ctx.Value(sshEventContextKey{}).(*Trace)
 	if trace == nil {
 		trace = NoOpLoggingHooks
 	} else {
-		_ = mergo.Merge(trace, NoOpLoggingHooks) // nolint: gosec, errcheck
+		_ = mergo.Merge(trace, NoOpLoggingHooks)
 	}
 	return trace
 }
 
-// WithSshTrace returns a new context based on the provided parent
+// WithSSHTrace returns a new context based on the provided parent
 // ctx. Requests made with the returned context will use
 // the provided trace hooks
-func WithSshTrace(ctx context.Context, trace *Trace) context.Context {
+func WithSSHTrace(ctx context.Context, trace *Trace) context.Context {
 	ctx = context.WithValue(ctx, sshEventContextKey{}, trace)
 	return ctx
 }
@@ -49,9 +49,9 @@ type Trace struct {
 	// whether it was successful.
 	NewServerConn func(conn net.Conn, err error)
 
-	// SshChannelAccept is called when a ssh channel Accept() call completes, with err indicating
+	// SSHChannelAccept is called when a ssh channel Accept() call completes, with err indicating
 	// whether it was successful.
-	SshChannelAccept func(conn net.Conn, err error)
+	SSHChannelAccept func(conn net.Conn, err error)
 
 	// SubsystemRequestReply is called when a subsystem request Reply call completes, with err indicating
 	// whether it was successful.
@@ -78,9 +78,9 @@ var DefaultLoggingHooks = &Trace{
 			log.Printf("NewServerConn status:%v\n", e)
 		}
 	},
-	SshChannelAccept: func(conn net.Conn, e error) {
+	SSHChannelAccept: func(conn net.Conn, e error) {
 		if e != nil {
-			log.Printf("SshChannelAccept status:%v\n", e)
+			log.Printf("SSHChannelAccept status:%v\n", e)
 		}
 	},
 	SubsystemRequestReply: func(e error) {
@@ -104,7 +104,7 @@ var DiagnosticLoggingHooks = &Trace{
 	NewServerConn: func(conn net.Conn, e error) {
 		log.Printf("NewServerConn conn:%v status:%v\n", conn, e)
 	},
-	SshChannelAccept: func(conn net.Conn, e error) {
+	SSHChannelAccept: func(conn net.Conn, e error) {
 		log.Printf("NewServerConn conn:%v status:%v\n", conn, e)
 	},
 	SubsystemRequestReply: func(e error) {
@@ -118,6 +118,6 @@ var NoOpLoggingHooks = &Trace{
 	StartAccepting:        func() {},
 	Accepted:              func(conn net.Conn, ze error) {},
 	NewServerConn:         func(conn net.Conn, ze error) {},
-	SshChannelAccept:      func(conn net.Conn, ze error) {},
+	SSHChannelAccept:      func(conn net.Conn, ze error) {},
 	SubsystemRequestReply: func(ze error) {},
 }

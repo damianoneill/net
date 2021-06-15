@@ -29,7 +29,7 @@ func TestSessionSetupFailure(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
 	ctx := WithClientTrace(context.Background(), DefaultLoggingHooks)
@@ -44,7 +44,7 @@ func TestSessionSetupSuccess(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
 	s, err := NewRPCSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &Config{SetupTimeoutSecs: 1})
@@ -87,7 +87,7 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
 	ctx := context.Background()

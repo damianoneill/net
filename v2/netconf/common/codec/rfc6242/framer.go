@@ -11,7 +11,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-
+//nolint:gomnd
 package rfc6242
 
 import (
@@ -81,7 +81,6 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 			// their peer has the appropriate capability (data
 			// contained within token).
 			if d.eofOK = i == len(tokenEOM); d.eofOK {
-
 				// If there is a pending framer, it can now take effect (see comment in decoder setFramer())
 				if d.pendingFramer != nil {
 					d.framer = d.pendingFramer
@@ -102,7 +101,7 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 			}
 		}
 	}
-	return
+	return advance, token, err
 }
 
 // decoderChunked is the NETCONF 1.1 chunked framing decoder function.
@@ -183,7 +182,7 @@ const (
 	chActionChunk
 )
 
-// nolint : gocyclo
+// nolint:gocyclo
 func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksize uint64, err error) {
 	// special case short blocks to detect specific errors. we will
 	// never be called with an empty b.
@@ -245,11 +244,11 @@ func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksi
 		if len(b) > 8 {
 			got = b[:8]
 		} else {
-			got = b[:]
+			got = b
 		}
 		err = chunkHeaderLexError{got: got, want: []byte("\n#")}
 	}
-	return
+	return action, advance, chunksize, err
 }
 
 type chunkHeaderLexError struct{ got, want, wexplicit []byte }

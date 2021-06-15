@@ -7,6 +7,6 @@ import (
 
 func TestDefaultHooksForUntestableExceptions(t *testing.T) {
 	hooks := DefaultLoggingHooks
-	hooks.SshChannelAccept(nil, errors.New("failed"))
+	hooks.SSHChannelAccept(nil, errors.New("failed"))
 	hooks.SubsystemRequestReply(errors.New("failed"))
 }

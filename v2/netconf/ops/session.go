@@ -11,7 +11,7 @@ import (
 )
 
 type Namespace struct {
-	Id   string
+	ID   string
 	Path string
 }
 
@@ -55,7 +55,7 @@ type OpSession interface {
 	// - Cfg(cfg), where cfg is
 	//   o   an xml string, in which case it will be used verbatim as the content of the <config> element.
 	//   o   a struct with xml tags that will be marshalled as the child of the <config> element.
-	// - CfgUrl(url), in which case the configuration is defined by a <url> element.
+	// - CfgURL(url), in which case the configuration is defined by a <url> element.
 	EditConfig(target string, config ConfigOption, options ...EditOption) error
 
 	// EditConfigCfg issues an edit-config request defined by config to be applied to the target configuration.
@@ -66,13 +66,13 @@ type OpSession interface {
 	// CopyConfig issues a copy-config request.
 	// source and target are defined by a CfgDsOpt, which can be one of:
 	// - DsName(name) where name defines the configuration data store name (Running, Candidate ...)
-	// - DsUrl(url) where url defines the url of the datastore
+	// - DsURL(url) where url defines the url of the datastore
 	CopyConfig(source, target CfgDsOpt) error
 
 	// DeleteConfig issues a delete-config request.
 	// target is defined by a CfgDsOpt, which can be one of:
 	// - DsName(name) where name defines the configuration data store name (Running, Candidate ...)
-	// - DsUrl(url) where url defines the url of the datastore to be deleted
+	// - DsURL(url) where url defines the url of the datastore to be deleted
 	DeleteConfig(target CfgDsOpt) error
 
 	// Lock issues a lock request on the target configuration.
@@ -99,7 +99,7 @@ func (s *sImpl) Close() {
 	s.Session.Close()
 }
 
-func (s *sImpl) GetSubtree(filter interface{}, result interface{}) error {
+func (s *sImpl) GetSubtree(filter, result interface{}) error {
 	return s.handleGetRequest(createGetSubtreeRequest(filter), result)
 }
 
@@ -188,9 +188,9 @@ func Cfg(cfg interface{}) ConfigOption {
 	}
 }
 
-func CfgUrl(url string) ConfigOption {
+func CfgURL(url string) ConfigOption {
 	return func(req *EditConfigReq) {
-		req.ConfigUrl = url
+		req.ConfigURL = url
 	}
 }
 
@@ -203,9 +203,9 @@ func DsName(name string) CfgDsOpt {
 	}
 }
 
-func DsUrl(url string) CfgDsOpt {
+func DsURL(url string) CfgDsOpt {
 	return func(t *ConfigType) {
-		t.Url = url
+		t.URL = url
 	}
 }
 
@@ -251,7 +251,7 @@ func createGetXpathRequest(xpath string, nslist []Namespace) common.Request {
 func getNamespaceAttributes(nslist []Namespace) string {
 	var attrs string
 	for _, ns := range nslist {
-		attrs = fmt.Sprintf(`%s xmlns:%s="%s"`, attrs, ns.Id, ns.Path)
+		attrs = fmt.Sprintf(`%s xmlns:%s="%s"`, attrs, ns.ID, ns.Path)
 	}
 	return strings.TrimSpace(attrs)
 }
@@ -265,7 +265,7 @@ func createGetConfigSubtreeRequest(s interface{}, source string) common.Request 
 	return req
 }
 
-func createGetConfigXpathRequest(xpath string, source string, nslist []Namespace) common.Request {
+func createGetConfigXpathRequest(xpath, source string, nslist []Namespace) common.Request {
 	// xml Marshaller will not create self-closing tags....
 	req := &GetConfigReq{Source: &ConfigType{Type: "<" + source + "/>"}}
 	if xpath != "" {
@@ -311,7 +311,7 @@ func createDiscardRequest() *DiscardReq {
 }
 
 func createKillSessionRequest(id uint64) *KillSessionReq {
-	return &KillSessionReq{Id: id}
+	return &KillSessionReq{ID: id}
 }
 
 func createCloseSessionRequest() *CloseSessionReq {
@@ -319,7 +319,7 @@ func createCloseSessionRequest() *CloseSessionReq {
 }
 
 func createGetShemaRequest(id, version, format string) common.Request {
-	return &GetSchema{Id: id, Vsn: version, Fmt: format}
+	return &GetSchema{ID: id, Vsn: version, Fmt: format}
 }
 
 func createGetShemasRequest() common.Request {
@@ -365,7 +365,7 @@ type GetReq struct {
 
 type ConfigType struct {
 	Type string `xml:",innerxml"`
-	Url  string `xml:"url,omitempty"`
+	URL  string `xml:"url,omitempty"`
 }
 
 type GetConfigReq struct {
@@ -382,7 +382,7 @@ type EditConfigReq struct {
 	TestOption       string      `xml:"test-option,omitempty"`
 	DefaultOperation string      `xml:"default-operation,omitempty"`
 	Config           *Config
-	ConfigUrl        string `xml:"url,omitempty"`
+	ConfigURL        string `xml:"url,omitempty"`
 }
 
 type CopyConfigReq struct {
@@ -416,12 +416,12 @@ type CloseSessionReq struct {
 
 type KillSessionReq struct {
 	XMLName xml.Name `xml:"kill-session"`
-	Id      uint64   `xml:"session-id"`
+	ID      uint64   `xml:"session-id"`
 }
 
 type GetSchema struct {
 	XMLName xml.Name `xml:"urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring get-schema"`
-	Id      string   `xml:"identifier"`
+	ID      string   `xml:"identifier"`
 	Vsn     string   `xml:"version"`
 	Fmt     string   `xml:"format"`
 }

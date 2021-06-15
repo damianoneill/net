@@ -19,7 +19,7 @@ func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string)
 // a netconf session with the client configuration.
 func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, target string, cfg *Config) (s Session, err error) {
 	// Use supplied config, but apply any defaults to unspecified values.
-	var resolvedConfig Config = *cfg
+	resolvedConfig := *cfg
 	_ = mergo.Merge(&resolvedConfig, DefaultConfig)
 
 	var t Transport
@@ -28,7 +28,7 @@ func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, targ
 	}
 
 	if s, err = NewSession(ctx, t, &resolvedConfig); err != nil {
-		t.Close() // nolint: gosec,errcheck
+		_ = t.Close()
 	}
 	return
 }

@@ -95,5 +95,5 @@ var defaultServerConfig = serverConfig{
 }
 
 func (c *serverConfig) resolveServerHooks() {
-	mergo.Merge(c.trace, NoOpServerHooks) // nolint: gosec, errcheck
+	_ = mergo.Merge(c.trace, NoOpServerHooks)
 }

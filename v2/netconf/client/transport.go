@@ -41,13 +41,12 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 	}(time.Now())
 
 	defer func() {
-		// nolint: gosec, errcheck
 		if err != nil {
 			if impl.sshClient != nil {
-				impl.sshClient.Close()
+				_ = impl.sshClient.Close()
 			}
 			if impl.sshSession != nil {
-				impl.sshSession.Close()
+				_ = impl.sshSession.Close()
 			}
 		}
 	}()

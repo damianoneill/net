@@ -26,7 +26,7 @@ type HandlerFactory func(conn *ssh.ServerConn) Handler
 // NewServer deflivers a new test SSH Server, with a custom channel handler.
 // The server implements password authentication with the given credentials.
 func NewServer(ctx context.Context, address string, port int, cfg *ssh.ServerConfig, factory HandlerFactory) (server *Server, err error) {
-	server = &Server{trace: ContextSshTrace(ctx)}
+	server = &Server{trace: ContextSSHTrace(ctx)}
 
 	listenAddress := fmt.Sprintf("%s:%d", address, port)
 	server.listener, err = net.Listen("tcp", listenAddress)
@@ -47,12 +47,10 @@ func (s *Server) Port() int {
 
 // Close closes any resources used by the server.
 func (s *Server) Close() {
-	// nolint: gosec, errcheck
-	s.listener.Close()
+	_ = s.listener.Close()
 }
 
 func (s *Server) acceptConnections(config *ssh.ServerConfig, factory HandlerFactory) {
-	// nolint: gosec, errcheck
 	s.trace.StartAccepting()
 	for {
 		nConn, err := s.listener.Accept()
@@ -72,7 +70,7 @@ func (s *Server) acceptConnections(config *ssh.ServerConfig, factory HandlerFact
 		// Service the incoming Channel channel.
 		for newChannel := range chch {
 			dataChan, requests, err := newChannel.Accept()
-			s.trace.SshChannelAccept(nConn, err)
+			s.trace.SSHChannelAccept(nConn, err)
 			if err != nil {
 				continue
 			}

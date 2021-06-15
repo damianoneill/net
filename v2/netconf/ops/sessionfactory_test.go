@@ -26,7 +26,7 @@ func TestSessionSetupFailure(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
 	ctx := client.WithClientTrace(context.Background(), client.DefaultLoggingHooks)
@@ -41,10 +41,11 @@ func TestSessionSetupSuccess(t *testing.T) {
 	sshConfig := &ssh.ClientConfig{
 		User:            testserver.TestUserName,
 		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
-	s, err := NewSessionWithConfig(context.Background(), sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), &client.Config{SetupTimeoutSecs: 1})
+	s, err := NewSessionWithConfig(context.Background(), sshConfig,
+		fmt.Sprintf("localhost:%d", ts.Port()), &client.Config{SetupTimeoutSecs: 1})
 	assert.NoError(t, err, "Expecting new session to succeed")
 	assert.NotNil(t, s, "OpSession should not be nil")
 }
