@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/git-chglog/git-chglog v0.14.2
 	github.com/google/addlicense v0.0.0-20210428195630-6d92264d7170
-	github.com/goreleaser/goreleaser v0.169.0
+	github.com/goreleaser/goreleaser v0.175.0
 	github.com/imdario/mergo v0.3.12
 	github.com/mcubik/goverreport v1.0.0
 	github.com/pkg/errors v0.9.1
