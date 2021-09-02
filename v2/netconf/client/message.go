@@ -183,7 +183,10 @@ func (si *sesImpl) ServerCapabilities() []string {
 
 func (si *sesImpl) waitForServerHello() (err error) {
 	select {
-	case <-si.hellochan:
+	case result := <-si.hellochan:
+		if !result {
+			return errors.New("failed to get hello - remote closed connection?")
+		}
 	case <-time.After(time.Duration(si.cfg.SetupTimeoutSecs) * time.Second):
 		err = errors.New("failed to get hello from server")
 	}
