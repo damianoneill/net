@@ -13,7 +13,7 @@ export PATH := $(GOBIN):$(PATH)
 CGO_ENABLED ?= 0 # disabled, override as env variable
 GO := CGO_ENABLED=$(CGO_ENABLED) go
 GOPATH ?= $(shell $(GO) env GOPATH)
-GOFMT := $(GOBIN)/gofumpt -w -s
+GOFMT := $(GOBIN)/gofumpt -w
 GOMODULE := $(shell $(GO) list)
 GOTOOLS := $(shell cat tools.go | grep _ | awk -F'"' '{print $2}' | sed "s/.*\///" | sed -e 's/^"//' -e 's/"$$//' | awk '{print "$(GOBIN)/" $$0}')
  BINARY=$(shell go list -f '{{.Target}}') 
