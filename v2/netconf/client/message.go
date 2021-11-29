@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/damianoneill/net/v2/netconf/common"
 
@@ -145,7 +145,7 @@ func (si *sesImpl) ExecuteAsync(req common.Request, rchan chan *common.RPCReply)
 
 func (si *sesImpl) execute(req common.Request, rchan chan *common.RPCReply) (err error) {
 	// Build the request to be submitted.
-	msg := &common.RPCMessage{MessageID: uuid.NewV4().String(), Union: common.GetUnion(req)}
+	msg := &common.RPCMessage{MessageID: uuid.New().String(), Union: common.GetUnion(req)}
 
 	// Lock the request channel, so the request and response channel set up is atomic.
 	si.reqLock.Lock()
