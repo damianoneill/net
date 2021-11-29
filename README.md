@@ -1,10 +1,8 @@
 # Management Network Library
 
-[![Build Status](https://travis-ci.org/damianoneill/net.svg?branch=master)](https://travis-ci.org/damianoneill/net)
 [![GitHub release](https://img.shields.io/github/release/damianoneill/net.svg)](https://github.com/damianoneill/net/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/damianoneill/net)](https://goreportcard.com/report/github.com/damianoneill/net)
 [![license](https://img.shields.io/github/license/damianoneill/net.svg)](https://github.com/damianoneill/net/blob/master/LICENSE)
-[![Coverage Status](https://coveralls.io/repos/github/damianoneill/net/badge.svg?branch=master)](https://coveralls.io/github/damianoneill/net?branch=master)
 [![Go Docs](http://img.shields.io/badge/docs-GoDoc-blue.svg)](https://pkg.go.dev/github.com/damianoneill/net/v2?tab=overview)
 
 Management Protocol Network implementations in Go
