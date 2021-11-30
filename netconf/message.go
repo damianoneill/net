@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 // The Message layer defines a set of base protocol operations
@@ -156,7 +156,7 @@ func (si *sesImpl) ExecuteAsync(req Request, rchan chan *RPCReply) (err error) {
 
 func (si *sesImpl) execute(req Request, rchan chan *RPCReply) (err error) {
 	// Build the request to be submitted.
-	msg := &RPCMessage{MessageID: uuid.NewV4().String(), Methods: []byte(string(req))}
+	msg := &RPCMessage{MessageID: uuid.New().String(), Methods: []byte(string(req))}
 
 	// Lock the request channel, so the request and response channel set up is atomic.
 	si.reqLock.Lock()
