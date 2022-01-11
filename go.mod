@@ -16,5 +16,5 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/uw-labs/lichen v0.1.4
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	mvdan.cc/gofumpt v0.2.0
+	mvdan.cc/gofumpt v0.2.1
 )
