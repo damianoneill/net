@@ -6,7 +6,7 @@ require (
 	github.com/git-chglog/git-chglog v0.15.0
 	github.com/google/addlicense v0.0.0-20210428195630-6d92264d7170
 	github.com/google/uuid v1.3.0
-	github.com/goreleaser/goreleaser v1.1.0
+	github.com/goreleaser/goreleaser v1.5.0
 	github.com/imdario/mergo v0.3.12
 	github.com/mcubik/goverreport v1.0.0
 	github.com/pkg/errors v0.9.1
@@ -15,6 +15,6 @@ require (
 	github.com/segmentio/golines v0.6.0
 	github.com/stretchr/testify v1.7.0
 	github.com/uw-labs/lichen v0.1.4
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838
 	mvdan.cc/gofumpt v0.2.0
 )
