@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/psampaz/go-mod-outdated v0.8.0
 	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989
-	github.com/segmentio/golines v0.6.0
+	github.com/segmentio/golines v0.8.0
 	github.com/stretchr/testify v1.7.0
 	github.com/uw-labs/lichen v0.1.4
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
