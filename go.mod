@@ -3,7 +3,7 @@ module github.com/damianoneill/net
 go 1.15
 
 require (
-	github.com/git-chglog/git-chglog v0.15.0
+	github.com/git-chglog/git-chglog v0.15.1
 	github.com/google/addlicense v0.0.0-20210428195630-6d92264d7170
 	github.com/google/uuid v1.3.0
 	github.com/goreleaser/goreleaser v1.1.0
