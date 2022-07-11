@@ -27,23 +27,28 @@ type tImpl struct {
 	target      string
 }
 
+type SSHClientFactory interface {
+	Dial(ctx context.Context) (*ssh.Client, error)
+	Close(context.Context, *ssh.Client)
+}
+
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
 // and requesting the specified subsystem.
 // nolint : gosec
-func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target, subsystem string) (rt Transport, err error) {
+func NewSSHTransport(ctx context.Context, dialer SSHClientFactory, target string) (rt Transport, err error) {
 	impl := tImpl{target: target}
 	impl.trace = ContextClientTrace(ctx)
 
-	impl.trace.ConnectStart(clientConfig, target)
+	impl.trace.ConnectStart(target)
 
 	defer func(begin time.Time) {
-		impl.trace.ConnectDone(clientConfig, target, err, time.Since(begin))
+		impl.trace.ConnectDone(target, err, time.Since(begin))
 	}(time.Now())
 
 	defer func() {
 		if err != nil {
 			if impl.sshClient != nil {
-				_ = impl.sshClient.Close()
+				dialer.Close(ctx, impl.sshClient)
 			}
 			if impl.sshSession != nil {
 				_ = impl.sshSession.Close()
@@ -51,7 +56,7 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 		}
 	}()
 
-	impl.sshClient, err = ssh.Dial("tcp", target, clientConfig)
+	impl.sshClient, err = dialer.Dial(ctx)
 	if err != nil {
 		return
 	}
@@ -60,7 +65,7 @@ func NewSSHTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 		return
 	}
 
-	if err = impl.sshSession.RequestSubsystem(subsystem); err != nil {
+	if err = impl.sshSession.RequestSubsystem("netconf"); err != nil {
 		return
 	}
 
