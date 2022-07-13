@@ -9,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/damianoneill/net/v2/netconf/common"
 	"github.com/damianoneill/net/v2/netconf/testserver"
 
 	assert "github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ssh"
 )
 
 func TestTransportFailure(t *testing.T) {
@@ -72,6 +73,23 @@ func TestSessionWithHooks(t *testing.T) {
 	assert.NotEqual(t, "", logged, "Something should be logged")
 	assert.Contains(t, logged, "Error context", "Error should be logged")
 	assert.Contains(t, logged, "ReadDone", "ReadDone should be logged")
+}
+
+func TestSessionSetupFromSSHClient(t *testing.T) {
+	ts := testserver.NewTestNetconfServer(t)
+
+	sshConfig := &ssh.ClientConfig{
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
+	}
+
+	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("localhost:%d", ts.Port()), sshConfig)
+	assert.NoError(t, err)
+
+	s, err := NewRPCSessionFromSSHClient(context.Background(), sshClient)
+	assert.NoError(t, err, "Expecting new session to succeed")
+	assert.NotNil(t, s, "Session should not be nil")
 }
 
 func exerciseSession(t *testing.T, hooks *ClientTrace) string {
@@ -146,3 +164,24 @@ func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 // 	assert.NoError(t, err, "Not expecting exec to fail")
 // 	assert.NotNil(t, reply, "Reply should be non-nil")
 // }
+
+// func TestRealNewSessionFromSSHClient(t *testing.T) {
+//	sshConfig := &ssh.ClientConfig{
+//		User:            "xxxxxxx",
+//		Auth:            []ssh.AuthMethod{ssh.Password("XxXxXxX")},
+//		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
+//	}
+//
+//	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("172.26.138.34:%d", 830), sshConfig)
+//	assert.NoError(t, err)
+//
+//	s, err := NewRPCSessionFromSSHClient(WithClientTrace(context.Background(), DefaultLoggingHooks), sshClient)
+//	assert.NoError(t, err, "Not expecting new session to fail")
+//	assert.NotNil(t, s, "Session should be non-nil")
+//
+//	defer s.Close()
+//
+//	reply, err := s.Execute(common.Request(`<get-config><source><running/></source></get-config>`))
+//	assert.NoError(t, err, "Not expecting exec to fail")
+//	assert.NotNil(t, reply, "Reply should be non-nil")
+//}

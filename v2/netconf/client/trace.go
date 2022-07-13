@@ -37,12 +37,18 @@ func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
 // ClientTrace defines a structure for handling trace events
 //nolint: golint
 type ClientTrace struct {
-	// ConnectStart is called when starting to connect to a remote server.
-	ConnectStart func(clientConfig *ssh.ClientConfig, target string)
+	// ConnectStart is called when starting to create a netconf connection to a remote server.
+	ConnectStart func(target string)
 
 	// ConnectDone is called when the transport connection attempt completes, with err indicating
 	// whether it was successful.
-	ConnectDone func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration)
+	ConnectDone func(target string, err error, d time.Duration)
+
+	// DialStart is called when starting to dial a remote server.
+	DialStart func(clientConfig *ssh.ClientConfig, target string)
+
+	// DialDone is called when dial completes.
+	DialDone func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration)
 
 	// HelloDone is called when the hello message has been received from the server.
 	HelloDone func(msg *common.HelloMessage)
@@ -88,8 +94,11 @@ var DefaultLoggingHooks = &ClientTrace{
 
 // MetricLoggingHooks provides a set of hooks that will log network metrics.
 var MetricLoggingHooks = &ClientTrace{
-	ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
-		log.Printf("NETCONF-ConnectDone target:%s config:%v err:%v took:%dms\n", target, clientConfig, err, d.Milliseconds())
+	ConnectDone: func(target string, err error, d time.Duration) {
+		log.Printf("NETCONF-ConnectDone target:%s err:%v took:%dms\n", target, err, d.Milliseconds())
+	},
+	DialDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
+		log.Printf("NETCONF-DialDone target:%s config:%v err:%v took:%dms\n", target, clientConfig, err, d.Milliseconds())
 	},
 	ReadDone: func(p []byte, c int, err error, d time.Duration) {
 		log.Printf("NETCONF-ReadDone len:%d err:%v took:%dms\n", c, err, d.Milliseconds())
@@ -107,10 +116,14 @@ var MetricLoggingHooks = &ClientTrace{
 
 // DiagnosticLoggingHooks provides a set of default diagnostic hooks
 var DiagnosticLoggingHooks = &ClientTrace{
-	ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
-		log.Printf("NETCONF-ConnectStart target:%s config:%v\n", target, clientConfig)
+	ConnectStart: func(target string) {
+		log.Printf("NETCONF-ConnectStart target:%s\n", target)
 	},
 	ConnectDone: MetricLoggingHooks.ConnectDone,
+	DialStart: func(clientConfig *ssh.ClientConfig, target string) {
+		log.Printf("NETCONF-DialStart target:%s config:%v\n", target, clientConfig)
+	},
+	DialDone: MetricLoggingHooks.DialDone,
 	ConnectionClosed: func(target string, err error) {
 		log.Printf("NETCONF-ConnectionClosed target:%s err:%v\n", target, err)
 	},
@@ -141,8 +154,10 @@ var DiagnosticLoggingHooks = &ClientTrace{
 
 // NoOpLoggingHooks provides set of hooks that do nothing.
 var NoOpLoggingHooks = &ClientTrace{
-	ConnectStart:     func(clientConfig *ssh.ClientConfig, target string) {},
-	ConnectDone:      func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
+	ConnectStart:     func(target string) {},
+	ConnectDone:      func(target string, err error, d time.Duration) {},
+	DialStart:        func(clientConfig *ssh.ClientConfig, target string) {},
+	DialDone:         func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {},
 	ConnectionClosed: func(target string, err error) {},
 	HelloDone:        func(msg *common.HelloMessage) {},
 	ReadStart:        func(p []byte) {},

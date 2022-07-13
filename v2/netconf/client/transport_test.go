@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var dftContext = context.Background()
+
 func TestSuccessfulConnection(t *testing.T) {
 	ts := testserver.NewSSHServer(t, "testUser", "testPassword")
 	defer ts.Close()
@@ -22,8 +24,7 @@ func TestSuccessfulConnection(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
-	ctx := context.Background()
-	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), "netconf")
+	tr, err := newTransport(dftContext, ts.Port(), sshConfig)
 	assert.NoError(t, err, "Not expecting new transport to fail")
 	defer tr.Close()
 }
@@ -38,8 +39,7 @@ func TestFailingConnection(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
-	ctx := context.Background()
-	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), "netconf")
+	tr, err := newTransport(dftContext, ts.Port(), sshConfig)
 	assert.Error(t, err, "Not expecting new transport to succeed")
 	assert.Nil(t, tr, "Transport should not be defined")
 }
@@ -54,8 +54,7 @@ func TestWriteRead(t *testing.T) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
 	}
 
-	ctx := context.Background()
-	tr, err := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), "netconf")
+	tr, err := newTransport(dftContext, ts.Port(), sshConfig)
 	assert.NoError(t, err, "Not expecting new transport to fail")
 	defer tr.Close()
 
@@ -77,11 +76,18 @@ func TestTrace(t *testing.T) {
 
 	var traces []string
 	trace := &ClientTrace{
-		ConnectStart: func(clientConfig *ssh.ClientConfig, target string) {
+		ConnectStart: func(target string) {
 			traces = append(traces, fmt.Sprintf("ConnectStart %s", target))
 		},
-		ConnectDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
+		ConnectDone: func(target string, err error, d time.Duration) {
 			traces = append(traces, fmt.Sprintf("ConnectDone %s error:%v", target, err))
+			assert.True(t, d > 0, "Duration should be defined")
+		},
+		DialStart: func(clientConfig *ssh.ClientConfig, target string) {
+			traces = append(traces, fmt.Sprintf("DialStart %s", target))
+		},
+		DialDone: func(clientConfig *ssh.ClientConfig, target string, err error, d time.Duration) {
+			traces = append(traces, fmt.Sprintf("DialDone %s error:%v", target, err))
 			assert.True(t, d > 0, "Duration should be defined")
 		},
 		ConnectionClosed: func(target string, err error) {
@@ -104,7 +110,7 @@ func TestTrace(t *testing.T) {
 	}
 
 	ctx := WithClientTrace(context.Background(), trace)
-	tr, _ := NewSSHTransport(ctx, sshConfig, fmt.Sprintf("localhost:%d", ts.Port()), "netconf")
+	tr, _ := newTransport(ctx, ts.Port(), sshConfig)
 
 	_, _ = tr.Write([]byte("Message\n"))
 	_, _ = bufio.NewReader(tr).ReadString('\n')
@@ -112,10 +118,17 @@ func TestTrace(t *testing.T) {
 	tr.Close()
 
 	assert.Equal(t, fmt.Sprintf("ConnectStart localhost:%d", ts.Port()), traces[0])
-	assert.Equal(t, fmt.Sprintf("ConnectDone localhost:%d error:<nil>", ts.Port()), traces[1])
-	assert.Equal(t, "WriteStart Message\n", traces[2])
-	assert.Equal(t, "WriteDone Message\n 8 <nil>", traces[3])
-	assert.Equal(t, "ReadStart called", traces[4])
-	assert.Equal(t, "ReadDone GOT:Message\n 12 <nil>", traces[5])
-	assert.Contains(t, traces[6], "ConnectionClosed target:localhost:", traces[6])
+	assert.Equal(t, fmt.Sprintf("DialStart localhost:%d", ts.Port()), traces[1])
+	assert.Equal(t, fmt.Sprintf("DialDone localhost:%d error:<nil>", ts.Port()), traces[2])
+	assert.Equal(t, fmt.Sprintf("ConnectDone localhost:%d error:<nil>", ts.Port()), traces[3])
+	assert.Equal(t, "WriteStart Message\n", traces[4])
+	assert.Equal(t, "WriteDone Message\n 8 <nil>", traces[5])
+	assert.Equal(t, "ReadStart called", traces[6])
+	assert.Equal(t, "ReadDone GOT:Message\n 12 <nil>", traces[7])
+	assert.Contains(t, traces[8], "ConnectionClosed target:localhost:")
+}
+
+func newTransport(ctx context.Context, port int, cfg *ssh.ClientConfig) (Transport, error) {
+	target := fmt.Sprintf("localhost:%d", port)
+	return NewSSHTransport(ctx, NewDialer(target, cfg), target)
 }

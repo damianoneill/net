@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"time"
 
 	"github.com/imdario/mergo"
 	"golang.org/x/crypto/ssh"
@@ -13,6 +14,11 @@ import (
 // a netconf session with default configuration.
 func NewRPCSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string) (s Session, err error) {
 	return NewRPCSessionWithConfig(ctx, sshcfg, target, DefaultConfig)
+}
+
+// NewRPCSessionFromSSHClient establishes a netconf session over the given ssh Client with default configuration.
+func NewRPCSessionFromSSHClient(ctx context.Context, client *ssh.Client) (s Session, err error) {
+	return NewRPCSessionFromSSHClientWithConfig(ctx, client, DefaultConfig)
 }
 
 // NewRPCSessionWithConfig connects to the  target using the ssh configuration, and establishes
@@ -33,6 +39,67 @@ func NewRPCSessionWithConfig(ctx context.Context, sshcfg *ssh.ClientConfig, targ
 	return
 }
 
+// NewRPCSessionFromSSHClientWithConfig establishes a netconf session over the given ssh Client with the client configuration.
+func NewRPCSessionFromSSHClientWithConfig(ctx context.Context, client *ssh.Client, cfg *Config) (s Session, err error) {
+	// Use supplied config, but apply any defaults to unspecified values.
+	resolvedConfig := *cfg
+	_ = mergo.Merge(&resolvedConfig, DefaultConfig)
+
+	var t Transport
+	if t, err = createTransportFromSSHClient(ctx, client); err != nil {
+		return
+	}
+
+	if s, err = NewSession(ctx, t, &resolvedConfig); err != nil {
+		_ = t.Close()
+	}
+	return
+}
+
 func createTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target string) (t Transport, err error) {
-	return NewSSHTransport(ctx, clientConfig, target, "netconf")
+	return NewSSHTransport(ctx, NewDialer(target, clientConfig), target)
+}
+
+func NewDialer(target string, clientConfig *ssh.ClientConfig) *realDialer { //nolint: golint
+	return &realDialer{target: target, config: clientConfig}
+}
+
+type realDialer struct {
+	target string
+	config *ssh.ClientConfig
+}
+
+func (rd *realDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
+	tracer := ContextClientTrace(ctx)
+
+	tracer.DialStart(rd.config, rd.target)
+	defer func(begin time.Time) {
+		tracer.DialDone(rd.config, rd.target, err, time.Since(begin))
+	}(time.Now())
+
+	return ssh.Dial("tcp", rd.target, rd.config)
+}
+
+func (rd *realDialer) Close(ctx context.Context, cli *ssh.Client) {
+	_ = cli.Close()
+}
+
+func createTransportFromSSHClient(ctx context.Context, client *ssh.Client) (t Transport, err error) {
+	return NewSSHTransport(ctx, newNoOpDialer(client), client.RemoteAddr().String())
+}
+
+func newNoOpDialer(client *ssh.Client) *noOpDialer {
+	return &noOpDialer{client: client}
+}
+
+type noOpDialer struct {
+	client *ssh.Client
+}
+
+func (nd *noOpDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
+	return nd.client, nil
+}
+
+func (nd *noOpDialer) Close(ctx context.Context, cli *ssh.Client) {
+	// Don't want to close a pre-existing connection.
 }
