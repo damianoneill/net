@@ -60,9 +60,9 @@ const (
 	NoSuchInstance
 )
 
-// Unmarshals an asn1 RawValue contqining a single variable to deliver a TypedValue that encapsulates the variable type and
-// the golang representation of the variable value.
-//nolint: gocyclo
+// Unmarshals an asn1 RawValue contqining a single variable to deliver a TypedValue that encapsulates the variable type
+// and the golang representation of the variable value.
+//nolint:gocyclo
 func unmarshalVariable(raw *asn1.RawValue) (*TypedValue, error) {
 	switch raw.Class {
 	case asn1.ClassUniversal:
@@ -118,7 +118,7 @@ func unmarshalInteger(raw *asn1.RawValue, dataType DataType) (*TypedValue, error
 
 // Casts an integer value to the integer type that corresponds to the SNMP data type.
 func integerValue(v int64, dataType DataType) interface{} {
-	switch dataType { //nolint: exhaustive
+	switch dataType { //nolint:exhaustive
 	case Counter32, Gauge32, Time:
 		return uint32(v)
 
@@ -147,7 +147,7 @@ func unmarshalOID(raw *asn1.RawValue) (*TypedValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TypedValue{Type: OID, Value: asn1.ObjectIdentifier(value.([]int))}, nil
+	return &TypedValue{Type: OID, Value: value}, nil
 }
 
 // Encapsulates the data type and value of a variable received in a variable binding from an agent.
@@ -158,9 +158,10 @@ type TypedValue struct {
 
 // Delivers value of a typed value as a string.
 func (tv *TypedValue) String() string {
+	const base10 = 10
 	switch tv.Type {
 	case Integer:
-		return strconv.FormatInt(tv.Value.(int64), 10)
+		return strconv.FormatInt(tv.Value.(int64), base10)
 	case OctetString:
 		return string(tv.Value.([]uint8))
 	case OID:
@@ -169,9 +170,9 @@ func (tv *TypedValue) String() string {
 		t := int64(tv.Value.(uint32)) * 10000
 		return time.Duration(t).String()
 	case Counter32, Gauge32:
-		return strconv.FormatInt(int64(tv.Value.(uint32)), 10)
+		return strconv.FormatInt(int64(tv.Value.(uint32)), base10)
 	case Counter64:
-		return strconv.FormatInt(int64(tv.Value.(uint64)), 10)
+		return strconv.FormatInt(int64(tv.Value.(uint64)), base10)
 	case IPAdddress:
 		address := tv.Value.([]uint8)
 		str := make([]string, len(address))
@@ -201,7 +202,7 @@ func (tv *TypedValue) OID() asn1.ObjectIdentifier {
 // Delivers value of a typed value as an int.
 // Value type must be integer-based.
 func (tv *TypedValue) Int() int {
-	switch tv.Type { //nolint: exhaustive
+	switch tv.Type { //nolint:exhaustive
 	case Integer:
 		return int(tv.Value.(int64))
 	case Counter64:

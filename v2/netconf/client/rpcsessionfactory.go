@@ -60,16 +60,16 @@ func createTransport(ctx context.Context, clientConfig *ssh.ClientConfig, target
 	return NewSSHTransport(ctx, NewDialer(target, clientConfig), target)
 }
 
-func NewDialer(target string, clientConfig *ssh.ClientConfig) *realDialer { //nolint: golint
-	return &realDialer{target: target, config: clientConfig}
+func NewDialer(target string, clientConfig *ssh.ClientConfig) *RealDialer { //nolint: golint
+	return &RealDialer{target: target, config: clientConfig}
 }
 
-type realDialer struct {
+type RealDialer struct {
 	target string
 	config *ssh.ClientConfig
 }
 
-func (rd *realDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
+func (rd *RealDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
 	tracer := ContextClientTrace(ctx)
 
 	tracer.DialStart(rd.config, rd.target)
@@ -80,7 +80,7 @@ func (rd *realDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
 	return ssh.Dial("tcp", rd.target, rd.config)
 }
 
-func (rd *realDialer) Close(ctx context.Context, cli *ssh.Client) {
+func (rd *RealDialer) Close(ctx context.Context, cli *ssh.Client) {
 	_ = cli.Close()
 }
 

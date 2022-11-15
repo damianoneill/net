@@ -77,8 +77,6 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
-    - goimports
     - gomnd
     - goprintffuncname
     - gosec
@@ -98,6 +96,14 @@ linters:
     - unparam
     - unused
     - whitespace
+  # Temporarily disabling gofmt and goimports, after moving to linter 1.49.0
+  # Linter complains "File is not `gofmt`-ed with `-s`".disable:
+  #   o make is configured to use gofumpt (which doesn't support -s), rather than gofmt
+  #   o even using gofmt -s made no difference - the file was unchanged and the linter still complained.
+  #  Similarly, goimports complains about some files not being `goimports`-ed with -local, although the setting
+  #  of local-prefixes (above) is probably not sensible.
+  #    - gofmt
+  #    - goimports
 
   # don't enable:
   # - asciicheck

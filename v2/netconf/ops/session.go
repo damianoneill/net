@@ -179,171 +179,6 @@ func (s *sImpl) GetSchema(id, version, format string) (string, error) {
 	return data.Content, err
 }
 
-// ConfigOption defines the configuration to be applied by an edit config operation
-type ConfigOption func(*EditConfigReq)
-
-func Cfg(cfg interface{}) ConfigOption {
-	return func(req *EditConfigReq) {
-		req.Config = &Config{Union: common.GetUnion(cfg)}
-	}
-}
-
-func CfgURL(url string) ConfigOption {
-	return func(req *EditConfigReq) {
-		req.ConfigURL = url
-	}
-}
-
-// CfgDsOpt
-type CfgDsOpt func(*ConfigType)
-
-func DsName(name string) CfgDsOpt {
-	return func(t *ConfigType) {
-		t.Type = "<" + name + "/>"
-	}
-}
-
-func DsURL(url string) CfgDsOpt {
-	return func(t *ConfigType) {
-		t.URL = url
-	}
-}
-
-// EditOption configures an edit config operation.
-type EditOption func(*EditConfigReq)
-
-func DefaultOperation(oper string) EditOption {
-	return func(req *EditConfigReq) {
-		req.DefaultOperation = oper
-	}
-}
-
-func TestOption(opt string) EditOption {
-	return func(req *EditConfigReq) {
-		req.TestOption = opt
-	}
-}
-
-func ErrorOption(opt string) EditOption {
-	return func(req *EditConfigReq) {
-		req.ErrorOption = opt
-	}
-}
-
-func (r *EditConfigReq) applyOpts(options ...EditOption) {
-	for _, opt := range options {
-		opt(r)
-	}
-}
-
-func createGetSubtreeRequest(s interface{}) common.Request {
-	req := &GetReq{}
-	if s != nil {
-		req.Filter = &Filter{Type: "subtree", Union: common.GetUnion(s)}
-	}
-	return req
-}
-
-func createGetXpathRequest(xpath string, nslist []Namespace) common.Request {
-	return fmt.Sprintf(`<get><filter %s type="xpath" select="%s"/></get>`, getNamespaceAttributes(nslist), xpath)
-}
-
-func getNamespaceAttributes(nslist []Namespace) string {
-	var attrs string
-	for _, ns := range nslist {
-		attrs = fmt.Sprintf(`%s xmlns:%s="%s"`, attrs, ns.ID, ns.Path)
-	}
-	return strings.TrimSpace(attrs)
-}
-
-func createGetConfigSubtreeRequest(s interface{}, source string) common.Request {
-	// xml Marshaller will not create self-closing tags (and some devices require it)...
-	req := &GetConfigReq{Source: &ConfigType{Type: "<" + source + "/>"}}
-	if s != nil {
-		req.Filter = &Filter{Type: "subtree", Union: common.GetUnion(s)}
-	}
-	return req
-}
-
-func createGetConfigXpathRequest(xpath, source string, nslist []Namespace) common.Request {
-	// xml Marshaller will not create self-closing tags....
-	req := &GetConfigReq{Source: &ConfigType{Type: "<" + source + "/>"}}
-	if xpath != "" {
-		req.FilterBody = createXpathFilter(xpath, nslist)
-	}
-	return req
-}
-
-func createXpathFilter(xpath string, nslist []Namespace) string {
-	return fmt.Sprintf(`<filter %s type="xpath" select="%s"/>`, getNamespaceAttributes(nslist), xpath)
-}
-
-func createEditConfigRequest(target string, cfgOpt ConfigOption, options ...EditOption) *EditConfigReq {
-	req := &EditConfigReq{Target: &ConfigType{Type: "<" + target + "/>"}}
-	req.applyOpts(options...)
-	cfgOpt(req)
-	return req
-}
-
-func createCopyConfigRequest(source, target CfgDsOpt) *CopyConfigReq {
-	req := &CopyConfigReq{Source: &ConfigType{}, Target: &ConfigType{}}
-	source(req.Source)
-	target(req.Target)
-	return req
-}
-
-func createDeleteConfigRequest(target CfgDsOpt) *DeleteConfigReq {
-	req := &DeleteConfigReq{Target: &ConfigType{}}
-	target(req.Target)
-	return req
-}
-
-func createLockRequest(target string) *LockReq {
-	return &LockReq{Target: &ConfigType{Type: "<" + target + "/>"}}
-}
-
-func createUnlockRequest(target string) *UnlockReq {
-	return &UnlockReq{Target: &ConfigType{Type: "<" + target + "/>"}}
-}
-
-func createDiscardRequest() *DiscardReq {
-	return &DiscardReq{}
-}
-
-func createKillSessionRequest(id uint64) *KillSessionReq {
-	return &KillSessionReq{ID: id}
-}
-
-func createCloseSessionRequest() *CloseSessionReq {
-	return &CloseSessionReq{}
-}
-
-func createGetShemaRequest(id, version, format string) common.Request {
-	return &GetSchema{ID: id, Vsn: version, Fmt: format}
-}
-
-func createGetShemasRequest() common.Request {
-	return createGetSubtreeRequest("<netconf-state><schemas/></netconf-state>")
-}
-
-func (s *sImpl) handleGetRequest(req common.Request, result interface{}) error {
-	reply, err := s.Session.Execute(req)
-	if err != nil {
-		return err
-	}
-
-	switch target := result.(type) {
-	case *string:
-		data := &Data{}
-		err = xml.Unmarshal([]byte(reply.Data), data)
-		*target = data.Content
-	default:
-		data := &Data{Body: result}
-		err = xml.Unmarshal([]byte(reply.Data), data)
-	}
-	return err
-}
-
 // Request structs.
 
 type Filter struct {
@@ -424,4 +259,169 @@ type GetSchema struct {
 	ID      string   `xml:"identifier"`
 	Vsn     string   `xml:"version"`
 	Fmt     string   `xml:"format"`
+}
+
+// ConfigOption defines the configuration to be applied by an edit config operation
+type ConfigOption func(*EditConfigReq)
+
+func Cfg(cfg interface{}) ConfigOption {
+	return func(req *EditConfigReq) {
+		req.Config = &Config{Union: common.GetUnion(cfg)}
+	}
+}
+
+func CfgURL(url string) ConfigOption {
+	return func(req *EditConfigReq) {
+		req.ConfigURL = url
+	}
+}
+
+// CfgDsOpt
+type CfgDsOpt func(*ConfigType)
+
+func DsName(name string) CfgDsOpt {
+	return func(t *ConfigType) {
+		t.Type = "<" + name + "/>"
+	}
+}
+
+func DsURL(url string) CfgDsOpt {
+	return func(t *ConfigType) {
+		t.URL = url
+	}
+}
+
+// EditOption configures an edit config operation.
+type EditOption func(*EditConfigReq)
+
+func DefaultOperation(oper string) EditOption {
+	return func(req *EditConfigReq) {
+		req.DefaultOperation = oper
+	}
+}
+
+func TestOption(opt string) EditOption {
+	return func(req *EditConfigReq) {
+		req.TestOption = opt
+	}
+}
+
+func ErrorOption(opt string) EditOption {
+	return func(req *EditConfigReq) {
+		req.ErrorOption = opt
+	}
+}
+
+func (r *EditConfigReq) applyOpts(options ...EditOption) {
+	for _, opt := range options {
+		opt(r)
+	}
+}
+
+func createGetSubtreeRequest(s interface{}) common.Request {
+	req := &GetReq{}
+	if s != nil {
+		req.Filter = &Filter{Type: "subtree", Union: common.GetUnion(s)}
+	}
+	return req
+}
+
+func createGetXpathRequest(xpath string, nslist []Namespace) common.Request {
+	return fmt.Sprintf(`<get><filter %s type="xpath" select=%q/></get>`, getNamespaceAttributes(nslist), xpath)
+}
+
+func getNamespaceAttributes(nslist []Namespace) string {
+	var attrs string
+	for _, ns := range nslist {
+		attrs = fmt.Sprintf(`%s xmlns:%s=%q`, attrs, ns.ID, ns.Path)
+	}
+	return strings.TrimSpace(attrs)
+}
+
+func createGetConfigSubtreeRequest(s interface{}, source string) common.Request {
+	// xml Marshaller will not create self-closing tags (and some devices require it)...
+	req := &GetConfigReq{Source: &ConfigType{Type: "<" + source + "/>"}}
+	if s != nil {
+		req.Filter = &Filter{Type: "subtree", Union: common.GetUnion(s)}
+	}
+	return req
+}
+
+func createGetConfigXpathRequest(xpath, source string, nslist []Namespace) common.Request {
+	// xml Marshaller will not create self-closing tags....
+	req := &GetConfigReq{Source: &ConfigType{Type: "<" + source + "/>"}}
+	if xpath != "" {
+		req.FilterBody = createXpathFilter(xpath, nslist)
+	}
+	return req
+}
+
+func createXpathFilter(xpath string, nslist []Namespace) string {
+	return fmt.Sprintf(`<filter %s type="xpath" select=%q/>`, getNamespaceAttributes(nslist), xpath)
+}
+
+func createEditConfigRequest(target string, cfgOpt ConfigOption, options ...EditOption) *EditConfigReq {
+	req := &EditConfigReq{Target: &ConfigType{Type: "<" + target + "/>"}}
+	req.applyOpts(options...)
+	cfgOpt(req)
+	return req
+}
+
+func createCopyConfigRequest(source, target CfgDsOpt) *CopyConfigReq {
+	req := &CopyConfigReq{Source: &ConfigType{}, Target: &ConfigType{}}
+	source(req.Source)
+	target(req.Target)
+	return req
+}
+
+func createDeleteConfigRequest(target CfgDsOpt) *DeleteConfigReq {
+	req := &DeleteConfigReq{Target: &ConfigType{}}
+	target(req.Target)
+	return req
+}
+
+func createLockRequest(target string) *LockReq {
+	return &LockReq{Target: &ConfigType{Type: "<" + target + "/>"}}
+}
+
+func createUnlockRequest(target string) *UnlockReq {
+	return &UnlockReq{Target: &ConfigType{Type: "<" + target + "/>"}}
+}
+
+func createDiscardRequest() *DiscardReq {
+	return &DiscardReq{}
+}
+
+func createKillSessionRequest(id uint64) *KillSessionReq {
+	return &KillSessionReq{ID: id}
+}
+
+func createCloseSessionRequest() *CloseSessionReq {
+	return &CloseSessionReq{}
+}
+
+func createGetShemaRequest(id, version, format string) common.Request {
+	return &GetSchema{ID: id, Vsn: version, Fmt: format}
+}
+
+func createGetShemasRequest() common.Request {
+	return createGetSubtreeRequest("<netconf-state><schemas/></netconf-state>")
+}
+
+func (s *sImpl) handleGetRequest(req common.Request, result interface{}) error {
+	reply, err := s.Session.Execute(req)
+	if err != nil {
+		return err
+	}
+
+	switch target := result.(type) {
+	case *string:
+		data := &Data{}
+		err = xml.Unmarshal([]byte(reply.Data), data)
+		*target = data.Content
+	default:
+		data := &Data{Body: result}
+		err = xml.Unmarshal([]byte(reply.Data), data)
+	}
+	return err
 }

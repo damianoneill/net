@@ -1,4 +1,4 @@
-//nolint: dupl,gosec
+//nolint:dupl
 package ssh
 
 import (
