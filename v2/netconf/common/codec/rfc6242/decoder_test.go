@@ -1,4 +1,4 @@
-//nolint: dupl
+//nolint:dupl
 package rfc6242
 
 import (
@@ -161,7 +161,7 @@ func TestFramerTransition(t *testing.T) {
 	}
 }
 
-//nolint: funlen
+//nolint:funlen
 func TestChunkedFramer(t *testing.T) {
 	type decresp struct {
 		inputs     []string

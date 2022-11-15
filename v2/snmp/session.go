@@ -132,14 +132,12 @@ func (m *sessionImpl) Close() error {
 // Generates a packet to define the type of Get, the required oids and, in the case of a bulk get, the associated
 // non-repeaters and max-repetitions values.
 // Returns a PDU with the resolved variable bindings.
-func (m *sessionImpl) executeGet(ctx context.Context, getType messageType, oids []string, nonRepeaters, maxRepetitions int) (*PDU, error) {
+func (m *sessionImpl) executeGet(_ context.Context, getType messageType, oids []string, nonRepeaters, maxRepetitions int) (*PDU, error) {
 	// TODO Validate OIDs on entry.
 
 	// Keep trying until we succeed, a non-timeout error occurs or the retry limit is reached.
 	for i := 0; ; i++ {
-		cctx, cancel := context.WithTimeout(ctx, m.config.timeout)
-		defer cancel()
-		deadline, _ := cctx.Deadline()
+		deadline := time.Now().Add(m.config.timeout)
 		err := m.conn.SetDeadline(deadline)
 		if err != nil {
 			return nil, err

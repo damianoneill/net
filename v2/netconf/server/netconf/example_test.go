@@ -1,4 +1,4 @@
-//nolint: goconst,gosec
+//nolint:goconst
 package netconf
 
 import (

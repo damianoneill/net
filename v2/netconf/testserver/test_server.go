@@ -131,7 +131,7 @@ func newSSHServerConfig(t assert.TestingT, uname, password string) *ssh.ServerCo
 	return config
 }
 
-func generateHostKey(t assert.TestingT) (hostkey ssh.Signer) { // nolint: interfacer
+func generateHostKey(t assert.TestingT) (hostkey ssh.Signer) { //nolint:interfacer
 	reader := rand.Reader
 	bitSize := 2048
 	var err error

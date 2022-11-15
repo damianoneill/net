@@ -39,7 +39,6 @@ type SessionFactory func(*SessionHandler) SessionCallback
 
 // SessionHandler represents the server side of an active netconf SSH session.
 type SessionHandler struct {
-
 	// server references the Netconf server that launched the session.
 	server *Server
 

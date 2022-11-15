@@ -34,8 +34,6 @@ linters-settings:
     min-complexity: 15
   goimports:
     local-prefixes: github.com/golangci/golangci-lint
-  golint:
-    min-confidence: 0
   gomnd:
     settings:
       mnd:
@@ -68,43 +66,44 @@ linters:
 #  disable-all: true
   enable:
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
     - errcheck
     - exhaustive
+    - exportloopref
     - funlen
     - gochecknoinits
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
-    - goimports
-    - golint
     - gomnd
     - goprintffuncname
     - gosec
     - gosimple
     - govet
     - ineffassign
-    - interfacer
     - lll
     - misspell
     - nakedret
     - noctx
     - nolintlint
-    - rowserrcheck
-    - scopelint
+    - revive
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
+  # Temporarily disabling gofmt and goimports, after moving to linter 1.49.0
+  # Linter complains "File is not `gofmt`-ed with `-s`".disable:
+  #   o make is configured to use gofumpt (which doesn't support -s), rather than gofmt
+  #   o even using gofmt -s made no difference - the file was unchanged and the linter still complained.
+  #  Similarly, goimports complains about some files not being `goimports`-ed with -local, although the setting
+  #  of local-prefixes (above) is probably not sensible.
+  #    - gofmt
+  #    - goimports
 
   # don't enable:
   # - asciicheck

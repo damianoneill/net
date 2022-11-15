@@ -1,3 +1,5 @@
+//nolint:gofmt,goimports
+
 // Copyright 2018 Andrew Fort
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +45,6 @@ var tokenEOM = []byte("]]>]]>")
 
 // decoderEndOfMessage is the NETCONF 1.0 end-of-message delimited
 // decoding function.
-// nolint: gocyclo
 func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	d.eofOK = false
 	var i int
@@ -105,7 +106,7 @@ func decoderEndOfMessage(d *Decoder, b []byte, atEOF bool) (advance int, token [
 }
 
 // decoderChunked is the NETCONF 1.1 chunked framing decoder function.
-// nolint : gocyclo
+//nolint:gocyclo
 func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte, err error) {
 	if d.scanErr != nil {
 		err = d.scanErr
@@ -171,6 +172,7 @@ func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte
 		}
 	}
 
+	//nolint:nakedret
 	return
 }
 
@@ -182,7 +184,7 @@ const (
 	chActionChunk
 )
 
-// nolint:gocyclo
+//nolint:gocyclo
 func detectChunkHeader(b []byte) (action chunkHeaderAction, advance int, chunksize uint64, err error) {
 	// special case short blocks to detect specific errors. we will
 	// never be called with an empty b.

@@ -34,7 +34,6 @@ type SSHClientFactory interface {
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
 // and requesting the specified subsystem.
-// nolint : gosec
 func NewSSHTransport(ctx context.Context, dialer SSHClientFactory, target string) (rt Transport, err error) {
 	impl := tImpl{target: target}
 	impl.trace = ContextClientTrace(ctx)
@@ -81,7 +80,7 @@ func NewSSHTransport(ctx context.Context, dialer SSHClientFactory, target string
 	impl.injectTraceWriter()
 
 	rt = &impl
-	return
+	return rt, err
 }
 
 func (t *tImpl) Read(p []byte) (n int, err error) {

@@ -64,7 +64,8 @@ type FactoryImpl struct {
 }
 
 func (f FactoryImpl) NewSession(ctx context.Context, sshcfg *ssh.ClientConfig, target string,
-	opts ...SessionOption) (s Session, err error) {
+	opts ...SessionOption,
+) (s Session, err error) {
 	config := *f.cfg
 	for _, opt := range opts {
 		opt(&config)

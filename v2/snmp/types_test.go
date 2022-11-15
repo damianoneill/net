@@ -8,7 +8,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-//nolint: funlen
+//nolint:funlen
 func TestUnmarshalVariable(t *testing.T) {
 	tests := []struct {
 		name      string

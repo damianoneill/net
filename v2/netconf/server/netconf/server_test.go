@@ -70,7 +70,7 @@ func TestServer(t *testing.T) {
 	sshConfig := &xssh.ClientConfig{
 		User:            TestUserName,
 		Auth:            []xssh.AuthMethod{xssh.Password(TestPassword)},
-		HostKeyCallback: xssh.InsecureIgnoreHostKey(), //nolint: gosec
+		HostKeyCallback: xssh.InsecureIgnoreHostKey(),
 	}
 
 	ncs, err := ops.NewSession(context.Background(), sshConfig, fmt.Sprintf("%s:%d", "localhost", server.Port()))

@@ -56,7 +56,9 @@ func NewSSHTransport(ctx context.Context, sshcfg *ssh.ClientConfig, cfg *Transpo
 		// ssh.TTY_OP_ISPEED: 28800,
 		// ssh.TTY_OP_OSPEED: 28800,
 	}
-	err = t.session.RequestPty("dumb", 80, 80, terminalMode)
+	const terminalHeight = 80
+	const terminalWidth = 80
+	err = t.session.RequestPty("dumb", terminalHeight, terminalWidth, terminalMode)
 	if err != nil {
 		_ = t.Close()
 		return nil, errors.Wrap(err, "request pty failed")

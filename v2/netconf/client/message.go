@@ -286,7 +286,7 @@ func (si *sesImpl) handleNotification(token xml.StartElement) (err error) {
 }
 
 func buildNotification(nmsg *common.NotificationMessage) *common.Notification {
-	event := fmt.Sprintf(`<%s xmlns="%s">%s</%s>`,
+	event := fmt.Sprintf(`<%s xmlns=%q>%s</%s>`,
 		nmsg.Event.XMLName.Local, nmsg.Event.XMLName.Space, nmsg.Event.Event, nmsg.Event.XMLName.Local)
 	notification := &common.Notification{XMLName: nmsg.Event.XMLName, EventTime: nmsg.EventTime, Event: event}
 	return notification

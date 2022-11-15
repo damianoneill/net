@@ -34,8 +34,9 @@ func WithClientTrace(ctx context.Context, trace *ClientTrace) context.Context {
 	return ctx
 }
 
-// ClientTrace defines a structure for handling trace events
-//nolint: golint
+// ClientTrace defines a structure for handling trace events.
+
+//nolint:golint,revive
 type ClientTrace struct {
 	// ConnectStart is called when starting to create a netconf connection to a remote server.
 	ConnectStart func(target string)
