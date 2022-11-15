@@ -224,7 +224,8 @@ func (s *SessionImpl) launchReader() {
 	go func() {
 		defer close(s.inputs)
 		for {
-			stdoutBuf := make([]byte, 10000)
+			const bufLength = 10000
+			stdoutBuf := make([]byte, bufLength)
 			byteCount, err := s.tport.Read(stdoutBuf)
 			if err != nil {
 				return

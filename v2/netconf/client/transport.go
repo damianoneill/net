@@ -80,7 +80,7 @@ func NewSSHTransport(ctx context.Context, dialer SSHClientFactory, target string
 	impl.injectTraceWriter()
 
 	rt = &impl
-	return
+	return rt, err
 }
 
 func (t *tImpl) Read(p []byte) (n int, err error) {

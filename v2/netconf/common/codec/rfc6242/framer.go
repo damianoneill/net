@@ -1,3 +1,5 @@
+//nolint:gofmt,goimports
+
 // Copyright 2018 Andrew Fort
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -170,6 +172,7 @@ func decoderChunked(d *Decoder, b []byte, atEOF bool) (advance int, token []byte
 		}
 	}
 
+	//nolint:nakedret
 	return
 }
 
