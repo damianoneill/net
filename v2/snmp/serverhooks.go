@@ -8,7 +8,6 @@ import (
 
 // ServerHooks defines a structure for handling server hook events
 type ServerHooks struct {
-
 	// StartListening is called when the server is about to start listening for messages.
 	StartListening func(addr net.Addr)
 

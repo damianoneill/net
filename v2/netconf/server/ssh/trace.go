@@ -33,7 +33,6 @@ func WithSSHTrace(ctx context.Context, trace *Trace) context.Context {
 
 // Trace defines a structure for handling trace events
 type Trace struct {
-
 	// Listened is called when when an Listen() call completes, with err indicating
 	// whether it was successful.
 	Listened func(adddress string, err error)
