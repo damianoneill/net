@@ -92,6 +92,29 @@ func TestSessionSetupFromSSHClient(t *testing.T) {
 	assert.NotNil(t, s, "Session should not be nil")
 }
 
+func TestFailingSessionSetupFromSSHClient(t *testing.T) {
+	// Use an ssh server that won't talk netconf, so client fails to establish a netconf session.
+	ts := testserver.NewSSHServer(t, testserver.TestUserName, testserver.TestPassword)
+	defer ts.Close()
+
+	sshConfig := &ssh.ClientConfig{
+		User:            testserver.TestUserName,
+		Auth:            []ssh.AuthMethod{ssh.Password(testserver.TestPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //nolint: gosec
+	}
+
+	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("localhost:%d", ts.Port()), sshConfig)
+	assert.NoError(t, err)
+
+	s, err := NewRPCSessionFromSSHClient(context.Background(), sshClient)
+	assert.EqualError(t, err, "failed to get hello from server")
+	assert.Nil(t, s, "Session should be nil")
+
+	// Check client has not already been closed.
+	err = sshClient.Close()
+	assert.NoError(t, err)
+}
+
 func exerciseSession(t *testing.T, hooks *ClientTrace) string {
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)

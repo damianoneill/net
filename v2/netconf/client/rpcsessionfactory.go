@@ -80,8 +80,11 @@ func (rd *RealDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
 	return ssh.Dial("tcp", rd.target, rd.config)
 }
 
-func (rd *RealDialer) Close(ctx context.Context, cli *ssh.Client) {
-	_ = cli.Close()
+func (rd *RealDialer) Close(cli *ssh.Client) (err error) {
+	if cli != nil {
+		err = cli.Close()
+	}
+	return err
 }
 
 func createTransportFromSSHClient(ctx context.Context, client *ssh.Client) (t Transport, err error) {
@@ -100,6 +103,7 @@ func (nd *noOpDialer) Dial(ctx context.Context) (cli *ssh.Client, err error) {
 	return nd.client, nil
 }
 
-func (nd *noOpDialer) Close(ctx context.Context, cli *ssh.Client) {
+func (nd *noOpDialer) Close(_ *ssh.Client) error {
 	// Don't want to close a pre-existing connection.
+	return nil
 }
