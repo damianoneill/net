@@ -25,17 +25,21 @@ type tImpl struct {
 	sshClient   *ssh.Client
 	trace       *ClientTrace
 	target      string
+	dialer      SSHClientFactory
 }
 
+// SSHClientFactory defines a factory that provides an SSH client.
 type SSHClientFactory interface {
 	Dial(ctx context.Context) (*ssh.Client, error)
-	Close(context.Context, *ssh.Client)
+	// Close will close the client (assumed to have been returned by an earlier call to the Dial method), if
+	// appropriate.
+	Close(*ssh.Client) error
 }
 
 // NewSSHTransport creates a new SSH transport, connecting to the target with the supplied client configuration
 // and requesting the specified subsystem.
 func NewSSHTransport(ctx context.Context, dialer SSHClientFactory, target string) (rt Transport, err error) {
-	impl := tImpl{target: target}
+	impl := tImpl{target: target, dialer: dialer}
 	impl.trace = ContextClientTrace(ctx)
 
 	impl.trace.ConnectStart(target)
@@ -46,9 +50,7 @@ func NewSSHTransport(ctx context.Context, dialer SSHClientFactory, target string
 
 	defer func() {
 		if err != nil {
-			if impl.sshClient != nil {
-				dialer.Close(ctx, impl.sshClient)
-			}
+			dialer.Close(impl.sshClient)
 			if impl.sshSession != nil {
 				_ = impl.sshSession.Close()
 			}
@@ -114,9 +116,8 @@ func (t *tImpl) Close() (err error) {
 		sshSessionCloseErr = t.sshSession.Close()
 	}
 
-	if t.sshClient != nil {
-		err = t.sshClient.Close()
-	}
+	// Use dialer to close the client, so we don't close a pre-existing client.
+	err = t.dialer.Close(t.sshClient)
 
 	if err == nil {
 		err = writeCloseErr
