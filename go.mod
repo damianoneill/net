@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/git-chglog/git-chglog v0.15.1
-	github.com/google/addlicense v1.1.0
+	github.com/google/addlicense v1.1.1
 	github.com/google/uuid v1.3.0
 	github.com/imdario/mergo v0.3.13
 	github.com/mcubik/goverreport v1.0.0
