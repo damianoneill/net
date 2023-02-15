@@ -44,8 +44,8 @@ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.5.4 h1:jRbGcIw6P2Meqdwuo0H1p6JVLbL5DHKAKlYndzMwVZI=
 github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmVXmkdnm1bU=
-github.com/git-chglog/git-chglog v0.15.3 h1:1NB43lA3rRd9qAOhWoyB98mqprPfxrxtXQzw8SKaWeo=
-github.com/git-chglog/git-chglog v0.15.3/go.mod h1:BmWdTpqBVzPjKNrBTZGcQCrQV9zq6gFKurhWNnJbYDA=
+github.com/git-chglog/git-chglog v0.15.4 h1:BwPDj7AghQTfpXO+UxG4mZM5MUTe9wfDuenF3jpyNf0=
+github.com/git-chglog/git-chglog v0.15.4/go.mod h1:BmWdTpqBVzPjKNrBTZGcQCrQV9zq6gFKurhWNnJbYDA=
 github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg7847qk6SyHyPtNmDHnmrv/HOrqktSC+C9fM+CJOE=
 github.com/golang-jwt/jwt/v4 v4.4.2 h1:rcc4lwaZgFMCZ5jxF9ABolDcIHdBytAFgqFPbSJQAYs=
 github.com/golang-jwt/jwt/v4 v4.4.2/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
