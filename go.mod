@@ -9,7 +9,7 @@ require (
 	github.com/imdario/mergo v0.3.13
 	github.com/mcubik/goverreport v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/psampaz/go-mod-outdated v0.8.0
+	github.com/psampaz/go-mod-outdated v0.9.0
 	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989
 	github.com/segmentio/golines v0.11.0
 	github.com/stretchr/testify v1.8.1
@@ -58,7 +58,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/onsi/gomega v1.15.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.4.2 // indirect
+	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
