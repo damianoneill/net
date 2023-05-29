@@ -6,7 +6,7 @@ require (
 	github.com/git-chglog/git-chglog v0.15.3
 	github.com/google/addlicense v1.1.1
 	github.com/google/uuid v1.3.0
-	github.com/imdario/mergo v0.3.13
+	github.com/imdario/mergo v0.3.16
 	github.com/mcubik/goverreport v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/psampaz/go-mod-outdated v0.8.0
