@@ -12,7 +12,7 @@ require (
 	github.com/psampaz/go-mod-outdated v0.9.0
 	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989
 	github.com/segmentio/golines v0.11.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/uw-labs/lichen v0.1.7
 	golang.org/x/crypto v0.16.0
 	mvdan.cc/gofumpt v0.4.0
@@ -64,7 +64,7 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/trivago/tgo v1.0.7 // indirect
 	github.com/tsuyoshiwada/go-gitcmd v0.0.0-20180205145712-5f1f5f9475df // indirect
 	github.com/urfave/cli/v2 v2.24.3 // indirect
