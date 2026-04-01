@@ -2,6 +2,14 @@
 include ./.golang.mk
 # END OF REQUIRED SECTION
 
+# Override golangci-lint version to be compatible with Go 1.24
+GOLANGCI_LINT_VERSION := v1.64.8
+
+# Override tools to skip trivy - scanner not supported in this project
+tools: ## install tools
+tools: mod $(GOBIN)/golangci-lint $(GOTOOLS)
+	@true
+
 # Run 'make help' for the list of default targets
 
 # Example of overriding of default target
